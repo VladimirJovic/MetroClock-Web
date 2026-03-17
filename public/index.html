@@ -244,6 +244,37 @@
   </div>
 </div>
 
+<!-- EDIT USER MODAL -->
+<div class="modal-overlay hidden" id="edit-user-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <div><h2>Edit User</h2><p id="edit-modal-name"></p></div>
+      <button class="modal-close" onclick="closeEditModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="m-title">Role</div>
+      <div class="form-group" style="margin-bottom:16px">
+        <select id="edit-role">
+          <option value="employee">Employee</option>
+          <option value="manager">Manager</option>
+          <option value="admin">Admin</option>
+        </select>
+      </div>
+      <div class="m-title">Reports To</div>
+      <div class="form-group">
+        <select id="edit-manager">
+          <option value="">— No Manager —</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" onclick="saveEditUser()">Save Changes</button>
+      <span class="msg-success" id="edit-success"></span>
+      <span class="msg-error" id="edit-error"></span>
+    </div>
+  </div>
+</div>
+
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-box">
@@ -276,6 +307,7 @@
         <button class="nav-item" onclick="showTab('offices')"><span class="nav-icon">🏢</span> Offices</button>
         <div class="nav-label">Reports</div>
         <button class="nav-item" onclick="showTab('export')"><span class="nav-icon">📊</span> Export</button>
+        <button class="nav-item" onclick="showTab('integrations')"><span class="nav-icon">🔗</span> Integrations</button>
       </nav>
       <div class="sidebar-footer">
         <div class="admin-info">
@@ -426,6 +458,144 @@
         </div>
       </div>
 
+      <!-- INTEGRATIONS -->
+      <div id="tab-integrations" class="section-hidden">
+        <div class="page-header"><div><h1>Integrations</h1><p>Connect MetroClock with your team's tools</p></div></div>
+
+        <!-- Slack -->
+        <div class="card" id="int-card-slack">
+          <div class="card-header" style="cursor:pointer" onclick="toggleIntegration('slack')">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:36px;height:36px;background:#4A154B;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">💬</div>
+              <div><h2 style="margin:0">Slack</h2><p style="margin:0">Send notifications to a Slack channel</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="badge" id="slack-status-badge"></span>
+              <div id="slack-toggle" style="width:40px;height:22px;border-radius:11px;background:var(--bg4);border:1px solid var(--border);position:relative;transition:background 0.2s;flex-shrink:0">
+                <div id="slack-toggle-dot" style="width:16px;height:16px;border-radius:50%;background:var(--text3);position:absolute;top:2px;left:2px;transition:all 0.2s"></div>
+              </div>
+            </div>
+          </div>
+          <div id="int-body-slack" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+            <div class="form-group" style="max-width:500px;margin-bottom:14px">
+              <label>Webhook URL</label>
+              <input type="text" id="slack-webhook-url" placeholder="https://hooks.slack.com/services/..."/>
+            </div>
+            <div style="margin-bottom:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:12px;color:var(--text2)">
+              <strong style="color:var(--text)">How to set up:</strong> In Slack, go to <em>Apps → Incoming Webhooks → Add to Slack</em>, choose a channel, and paste the webhook URL above.
+            </div>
+            <div class="m-title" style="margin-top:0">User Mapping — Slack</div>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Enter each employee's Slack Member ID so they get tagged in notifications. Find it in Slack: click on a user → <em>View full profile → More → Copy member ID</em>.</p>
+            <div id="slack-user-mapping-table"></div>
+            <div class="form-actions" style="margin-top:16px">
+              <button class="btn-primary" onclick="saveIntegration('slack')">Save</button>
+              <button class="btn-ghost" onclick="testIntegration('slack')">Test</button>
+              <button class="btn-danger btn-sm" onclick="removeIntegration('slack')" style="margin-left:4px">Disable</button>
+              <span class="msg-success" id="slack-success"></span>
+              <span class="msg-error" id="slack-error"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Discord -->
+        <div class="card" id="int-card-discord">
+          <div class="card-header" style="cursor:pointer" onclick="toggleIntegration('discord')">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:36px;height:36px;background:#5865F2;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🎮</div>
+              <div><h2 style="margin:0">Discord</h2><p style="margin:0">Send notifications to a Discord channel</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="badge" id="discord-status-badge"></span>
+              <div id="discord-toggle" style="width:40px;height:22px;border-radius:11px;background:var(--bg4);border:1px solid var(--border);position:relative;transition:background 0.2s;flex-shrink:0">
+                <div id="discord-toggle-dot" style="width:16px;height:16px;border-radius:50%;background:var(--text3);position:absolute;top:2px;left:2px;transition:all 0.2s"></div>
+              </div>
+            </div>
+          </div>
+          <div id="int-body-discord" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+            <div class="form-group" style="max-width:500px;margin-bottom:14px">
+              <label>Webhook URL</label>
+              <input type="text" id="discord-webhook-url" placeholder="https://discord.com/api/webhooks/..."/>
+            </div>
+            <div style="margin-bottom:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:12px;color:var(--text2)">
+              <strong style="color:var(--text)">How to set up:</strong> In Discord, go to <em>Server Settings → Integrations → Webhooks → New Webhook</em>, choose a channel, and paste the URL above.
+            </div>
+            <div class="m-title" style="margin-top:0">User Mapping — Discord</div>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Enter each employee's Discord User ID so they get tagged in notifications. Enable Developer Mode in Discord (Settings → Advanced), then right-click a user → <em>Copy User ID</em>.</p>
+            <div id="discord-user-mapping-table"></div>
+            <div class="form-actions" style="margin-top:16px">
+              <button class="btn-primary" onclick="saveIntegration('discord')">Save</button>
+              <button class="btn-ghost" onclick="testIntegration('discord')">Test</button>
+              <button class="btn-danger btn-sm" onclick="removeIntegration('discord')" style="margin-left:4px">Disable</button>
+              <span class="msg-success" id="discord-success"></span>
+              <span class="msg-error" id="discord-error"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coming soon -->
+        <div class="card" style="opacity:0.45;pointer-events:none">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:36px;height:36px;background:#1a73e8;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">📅</div>
+              <div><h2 style="margin:0">Google Calendar</h2><p style="margin:0">Auto-create events for approved requests</p></div>
+            </div>
+            <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--text3)">Coming soon</span>
+          </div>
+        </div>
+        <!-- ClickUp -->
+        <div class="card" id="int-card-clickup">
+          <div class="card-header" style="cursor:pointer" onclick="toggleIntegration('clickup')">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:36px;height:36px;background:#7B68EE;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">✅</div>
+              <div><h2 style="margin:0">ClickUp</h2><p style="margin:0">Show assigned tasks at clock-in and remote requests</p></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <span class="badge" id="clickup-status-badge"></span>
+              <div id="clickup-toggle" style="width:40px;height:22px;border-radius:11px;background:var(--bg4);border:1px solid var(--border);position:relative;transition:background 0.2s;flex-shrink:0">
+                <div id="clickup-toggle-dot" style="width:16px;height:16px;border-radius:50%;background:var(--text3);position:absolute;top:2px;left:2px;transition:all 0.2s"></div>
+              </div>
+            </div>
+          </div>
+          <div id="int-body-clickup" style="display:none;margin-top:16px;border-top:1px solid var(--border);padding-top:16px">
+            <div class="form-group" style="max-width:500px;margin-bottom:14px">
+              <label>API Token</label>
+              <input type="password" id="clickup-api-token" placeholder="pk_XXXXXXXXXX"/>
+            </div>
+            <div style="margin-bottom:16px;padding:12px;background:var(--bg3);border-radius:10px;font-size:12px;color:var(--text2)">
+              <strong style="color:var(--text)">How to set up:</strong> In ClickUp go to <em>Settings → Apps → API Token</em> and paste your personal API token above.
+            </div>
+            <div class="m-title" style="margin-top:0">User Mapping — ClickUp</div>
+            <p style="font-size:12px;color:var(--text2);margin-bottom:12px">Enter each employee's ClickUp User ID. Find it in ClickUp: <em>Settings → My Profile</em> — the number in the URL is the user ID.</p>
+            <div id="clickup-user-mapping-table"></div>
+            <div class="form-actions" style="margin-top:16px">
+              <button class="btn-primary" onclick="saveClickUp()">Save</button>
+              <button class="btn-ghost" onclick="testClickUp()">Test Connection</button>
+              <button class="btn-danger btn-sm" onclick="removeIntegration('clickup')" style="margin-left:4px">Disable</button>
+              <span class="msg-success" id="clickup-success"></span>
+              <span class="msg-error" id="clickup-error"></span>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="opacity:0.45;pointer-events:none">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:36px;height:36px;background:#0052CC;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">🔷</div>
+              <div><h2 style="margin:0">Jira</h2><p style="margin:0">Log time against issues</p></div>
+            </div>
+            <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--text3)">Coming soon</span>
+          </div>
+        </div>
+        <div class="card" style="opacity:0.45;pointer-events:none">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:12px">
+              <div style="width:36px;height:36px;background:#F06A6A;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px">📌</div>
+              <div><h2 style="margin:0">Asana</h2><p style="margin:0">Log time against tasks</p></div>
+            </div>
+            <span class="badge" style="background:rgba(255,255,255,0.06);color:var(--text3)">Coming soon</span>
+          </div>
+        </div>
+      </div>
+
     </main>
   </div>
 </div>
@@ -455,7 +625,7 @@ auth.onAuthStateChanged(async (user) => {
       document.getElementById('admin-avatar').textContent = (u.firstName?.[0]||'')+(u.lastName?.[0]||'');
       document.getElementById('admin-name').textContent = u.firstName+' '+u.lastName;
       document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
-      loadOffices(); initExportYears();
+      loadOffices(); initExportYears(); loadIntegrations();
       loadUsers().then(() => loadDashboard());
     } else { auth.signOut(); document.getElementById('login-error').textContent = 'Access denied. Admins only.'; }
   } else {
@@ -472,9 +642,9 @@ function login() {
 function logout() { auth.signOut(); }
 
 // NAV
-const TAB_MAP = {dashboard:0, users:1, offices:2, export:3};
+const TAB_MAP = {dashboard:0, users:1, offices:2, export:3, integrations:4};
 function showTab(tab) {
-  ['dashboard','users','offices','export'].forEach(t => document.getElementById('tab-'+t).classList.toggle('section-hidden', t!==tab));
+  ['dashboard','users','offices','export','integrations'].forEach(t => document.getElementById('tab-'+t).classList.toggle('section-hidden', t!==tab));
   document.querySelectorAll('.nav-item').forEach((el,i) => el.classList.toggle('active', i===TAB_MAP[tab]));
   if (tab==='dashboard') loadDashboard();
 }
@@ -523,12 +693,7 @@ async function loadDashboard() {
     const inOffice = [], remote = [];
 
     for (const emp of active) {
-      // Remote — approved request for today, no clock-in needed
-      if (remoteIds.has(emp.id)) {
-        remote.push({...emp, firstIn: null, remoteHours: remoteData[emp.id] || 0});
-        continue;
-      }
-      // In Office — clocked in and no remote request
+      // Clock-in always takes priority over remote request
       const evs = todayEvents.filter(e => e.userId === emp.id).sort((a,b) => a.ts - b.ts);
       let lastIn = null, firstIn = null;
       for (const ev of evs) {
@@ -536,7 +701,11 @@ async function loadDashboard() {
         if (ev.type === 'clockOut') { lastIn = null; }
       }
       if (lastIn !== null) {
+        // Currently clocked in -> In Office (even if remote request exists)
         inOffice.push({...emp, firstIn});
+      } else if (remoteIds.has(emp.id)) {
+        // Not clocked in but has approved remote request -> Remote
+        remote.push({...emp, firstIn: null, remoteHours: remoteData[emp.id] || 0});
       }
     }
 
@@ -578,6 +747,10 @@ async function loadUsers() {
   const snap = await db.collection('users').get();
   allUsers = snap.docs.map(d => ({id:d.id,...d.data()}));
   renderUsers(); populateManagerDropdown();
+  // Re-render open integration mapping tables with fresh user data
+  ['slack','discord','clickup'].forEach(p => {
+    if (integrationState && integrationState[p]) renderUserMappingTable(p);
+  });
   return allUsers;
 }
 function renderUsers() {
@@ -597,6 +770,7 @@ function renderUsers() {
       <td style="font-size:11px;color:${hasSchedule?'var(--green)':'var(--text3)'}">${hasSchedule?'✓ Set':'Not set'}</td>
       <td style="display:flex;gap:6px">
         <button class="btn-sm btn-blue" onclick="openScheduleModal('${user.id}')">⚙ Schedule</button>
+        <button class="btn-sm" style="background:rgba(52,212,126,0.07);color:var(--green);border-color:rgba(52,212,126,0.18)" onclick="openEditModal('${user.id}')">✎ Edit</button>
         <button class="btn-sm" style="background:rgba(167,139,250,0.07);color:var(--purple);border-color:rgba(167,139,250,0.18)" onclick="sendResetEmail('${user.email}')">✉ Reset</button>
         ${isActive
           ?`<button class="btn-sm btn-danger" onclick="deactivateUser('${user.id}')">Deactivate</button>`
@@ -627,6 +801,37 @@ async function addUser() {
 }
 async function deactivateUser(id){if(!confirm('Deactivate this user?'))return;await db.collection('users').doc(id).update({isActive:false});loadUsers();}
 async function activateUser(id){await db.collection('users').doc(id).update({isActive:true});loadUsers();}
+
+// EDIT USER MODAL
+let editUserId = null;
+function openEditModal(userId) {
+  editUserId = userId;
+  const user = allUsers.find(u => u.id === userId); if (!user) return;
+  document.getElementById('edit-modal-name').textContent = user.firstName + ' ' + user.lastName;
+  document.getElementById('edit-role').value = user.role || 'employee';
+  document.getElementById('edit-success').textContent = '';
+  document.getElementById('edit-error').textContent = '';
+  document.getElementById('edit-manager').innerHTML = '<option value="">— No Manager —</option>' +
+    allUsers.filter(u => (u.role === 'manager' || u.role === 'admin') && u.id !== userId)
+      .map(m => `<option value="${m.id}" ${user.managerId===m.id?'selected':''}>${m.firstName} ${m.lastName}</option>`).join('');
+  document.getElementById('edit-user-modal').classList.remove('hidden');
+}
+function closeEditModal() { document.getElementById('edit-user-modal').classList.add('hidden'); editUserId = null; }
+async function saveEditUser() {
+  if (!editUserId) return;
+  document.getElementById('edit-success').textContent = '';
+  document.getElementById('edit-error').textContent = '';
+  const role = document.getElementById('edit-role').value;
+  const managerId = document.getElementById('edit-manager').value || null;
+  try {
+    await db.collection('users').doc(editUserId).update({ role, managerId });
+    const idx = allUsers.findIndex(u => u.id === editUserId);
+    if (idx >= 0) allUsers[idx] = { ...allUsers[idx], role, managerId };
+    document.getElementById('edit-success').textContent = '✓ Saved!';
+    renderUsers();
+    setTimeout(() => { document.getElementById('edit-success').textContent = ''; closeEditModal(); }, 1000);
+  } catch(e) { document.getElementById('edit-error').textContent = e.message; }
+}
 async function sendResetEmail(email){
   try {
     await auth.sendPasswordResetEmail(email);
@@ -972,6 +1177,203 @@ async function exportExcel(){
     document.getElementById('export-success').textContent=`✓ MetroClock_${monthName}_${year}.xlsx downloaded!`;
   } catch(e){document.getElementById('export-error').textContent=e.message;console.error(e);}
   finally{document.getElementById('export-btn').textContent='⬇ Download Excel';document.getElementById('export-btn').disabled=false;}
+}
+
+// INTEGRATIONS
+// INTEGRATIONS
+let integrationState = { slack: false, discord: false, clickup: false };
+let userMappings = { slack: {}, discord: {}, clickup: {} };
+
+async function loadIntegrations() {
+  try {
+    const snap = await db.collection('workspaces').doc('workspace1').get();
+    const data = snap.data() || {};
+    if (data.slackWebhookUrl) {
+      document.getElementById('slack-webhook-url').value = data.slackWebhookUrl;
+      setIntegrationEnabled('slack', true);
+    }
+    if (data.discordWebhookUrl) {
+      document.getElementById('discord-webhook-url').value = data.discordWebhookUrl;
+      setIntegrationEnabled('discord', true);
+    }
+    userMappings.slack = data.slackUserMappings || {};
+    userMappings.discord = data.discordUserMappings || {};
+    userMappings.clickup = data.clickupUserMappings || {};
+    if (data.clickupApiToken) {
+      document.getElementById('clickup-api-token').value = data.clickupApiToken;
+      // Set toggle visually without rendering user table (users not loaded yet)
+      integrationState['clickup'] = true;
+      const toggle = document.getElementById('clickup-toggle');
+      const dot = document.getElementById('clickup-toggle-dot');
+      const badge = document.getElementById('clickup-status-badge');
+      if (toggle) { toggle.style.background = 'var(--accent)'; }
+      if (dot) { dot.style.left = '20px'; dot.style.background = '#fff'; }
+      if (badge) { badge.textContent = 'Connected'; badge.style.background = 'rgba(52,212,126,0.1)'; badge.style.color = 'var(--green)'; }
+      // Body will be shown when user clicks, mapping table rendered then
+    }
+  } catch(e) { console.error('loadIntegrations error:', e); }
+}
+
+function setIntegrationEnabled(platform, enabled) {
+  integrationState[platform] = enabled;
+  const toggle = document.getElementById(platform+'-toggle');
+  const dot = document.getElementById(platform+'-toggle-dot');
+  const badge = document.getElementById(platform+'-status-badge');
+  const body = document.getElementById('int-body-'+platform);
+  if (enabled) {
+    toggle.style.background = 'var(--accent)';
+    dot.style.left = '20px';
+    dot.style.background = '#fff';
+    badge.textContent = 'Connected';
+    badge.style.background = 'rgba(52,212,126,0.1)';
+    badge.style.color = 'var(--green)';
+    if (body) { body.style.display = 'block'; }
+    if (allUsers.length) renderUserMappingTable(platform);
+  } else {
+    toggle.style.background = 'var(--bg4)';
+    dot.style.left = '2px';
+    dot.style.background = 'var(--text3)';
+    badge.textContent = 'Disabled';
+    badge.style.background = 'rgba(255,255,255,0.05)';
+    badge.style.color = 'var(--text3)';
+    if (body) body.style.display = 'none';
+  }
+}
+
+function toggleIntegration(platform) {
+  const newState = !integrationState[platform];
+  setIntegrationEnabled(platform, newState);
+}
+
+function renderUserMappingTable(platform) {
+  const container = document.getElementById(platform+'-user-mapping-table');
+  if (!container) return;
+  const employees = allUsers.filter(u => u.role !== 'admin');
+  if (!employees.length) { container.innerHTML = '<p style="font-size:12px;color:var(--text3)">No employees found.</p>'; return; }
+  const label = platform === 'slack' ? 'Slack Member ID' : platform === 'discord' ? 'Discord User ID' : 'ClickUp User ID';
+  const placeholder = platform === 'slack' ? 'U0XXXXXXXX' : platform === 'discord' ? '123456789012345678' : '12345678';
+  container.innerHTML = `<table style="width:100%;border-collapse:collapse;margin-bottom:4px">
+    <thead><tr>
+      <th style="text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;padding:0 0 8px">Employee</th>
+      <th style="text-align:left;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.07em;padding:0 0 8px">${label}</th>
+    </tr></thead>
+    <tbody>${employees.map(u => `<tr>
+      <td style="padding:6px 0;font-size:13px;color:var(--text);width:50%">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="u-av ua-${u.role}" style="width:24px;height:24px;font-size:9px">${(u.firstName?.[0]||'')+(u.lastName?.[0]||'')}</div>
+          ${u.firstName} ${u.lastName}
+        </div>
+      </td>
+      <td style="padding:6px 0;padding-right:8px">
+        <input type="text" id="${platform}-uid-${u.id}" value="${userMappings[platform][u.id]||''}"
+          placeholder="${placeholder}"
+          style="width:100%;padding:6px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:12px;font-family:'DM Mono',monospace;outline:none"/>
+      </td>
+    </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
+async function saveIntegration(platform) {
+  const fieldMap = { slack: 'slackWebhookUrl', discord: 'discordWebhookUrl', clickup: 'clickupApiToken' };
+  const mappingField = { slack: 'slackUserMappings', discord: 'discordUserMappings', clickup: 'clickupUserMappings' };
+  const url = document.getElementById(platform+'-webhook-url').value.trim();
+  const successEl = document.getElementById(platform+'-success');
+  const errorEl = document.getElementById(platform+'-error');
+  successEl.textContent = ''; errorEl.textContent = '';
+  if (!url) { errorEl.textContent = 'Please enter a webhook URL.'; return; }
+  const employees = allUsers.filter(u => u.role !== 'admin');
+  const mappings = {};
+  employees.forEach(u => {
+    const val = document.getElementById(platform+'-uid-'+u.id)?.value.trim();
+    if (val) mappings[u.id] = val;
+  });
+  userMappings[platform] = mappings;
+  try {
+    await db.collection('workspaces').doc('workspace1').update({
+      [fieldMap[platform]]: url,
+      [mappingField[platform]]: mappings
+    });
+    successEl.textContent = '✓ Saved!';
+    setTimeout(() => { successEl.textContent = ''; }, 2000);
+  } catch(e) { errorEl.textContent = e.message; }
+}
+
+async function removeIntegration(platform) {
+  if (!confirm('Disable this integration?')) return;
+  const fieldMap = { slack: 'slackWebhookUrl', discord: 'discordWebhookUrl', clickup: 'clickupApiToken' };
+  const mappingField = { slack: 'slackUserMappings', discord: 'discordUserMappings', clickup: 'clickupUserMappings' };
+  try {
+    await db.collection('workspaces').doc('workspace1').update({
+      [fieldMap[platform]]: firebase.firestore.FieldValue.delete(),
+      [mappingField[platform]]: firebase.firestore.FieldValue.delete()
+    });
+    document.getElementById(platform+'-webhook-url').value = '';
+    userMappings[platform] = {};
+    setIntegrationEnabled(platform, false);
+  } catch(e) { console.error(e); }
+}
+
+async function testIntegration(platform) {
+  const url = document.getElementById(platform+'-webhook-url').value.trim();
+  const errorEl = document.getElementById(platform+'-error');
+  const successEl = document.getElementById(platform+'-success');
+  errorEl.textContent = ''; successEl.textContent = '';
+  if (!url) { errorEl.textContent = 'Please enter a webhook URL first.'; return; }
+  const message = '🧪 MetroClock test message — integration is working!';
+  try {
+    if (platform === 'slack') {
+      await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ text: message }) });
+    } else {
+      await fetch(url, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ content: message }) });
+    }
+    successEl.textContent = '✓ Test sent!';
+    setTimeout(() => { successEl.textContent = ''; }, 2000);
+  } catch(e) { errorEl.textContent = 'Failed: ' + e.message; }
+}
+
+// CLICKUP
+async function saveClickUp() {
+  const token = document.getElementById('clickup-api-token').value.trim();
+  const successEl = document.getElementById('clickup-success');
+  const errorEl = document.getElementById('clickup-error');
+  successEl.textContent = ''; errorEl.textContent = '';
+  if (!token) { errorEl.textContent = 'Please enter an API token.'; return; }
+  const employees = allUsers.filter(u => u.role !== 'admin');
+  const mappings = {};
+  employees.forEach(u => {
+    const val = document.getElementById('clickup-uid-'+u.id)?.value.trim();
+    if (val) mappings[u.id] = val;
+  });
+  userMappings.clickup = mappings;
+  try {
+    await db.collection('workspaces').doc('workspace1').update({
+      clickupApiToken: token,
+      clickupUserMappings: mappings
+    });
+    successEl.textContent = '✓ Saved!';
+    setTimeout(() => { successEl.textContent = ''; }, 2000);
+  } catch(e) { errorEl.textContent = e.message; }
+}
+
+async function testClickUp() {
+  const token = document.getElementById('clickup-api-token').value.trim();
+  const successEl = document.getElementById('clickup-success');
+  const errorEl = document.getElementById('clickup-error');
+  successEl.textContent = ''; errorEl.textContent = '';
+  if (!token) { errorEl.textContent = 'Please enter an API token first.'; return; }
+  try {
+    const res = await fetch('https://api.clickup.com/api/v2/user', {
+      headers: { 'Authorization': token }
+    });
+    const data = await res.json();
+    if (data.user) {
+      successEl.textContent = `✓ Connected as ${data.user.username}`;
+      setTimeout(() => { successEl.textContent = ''; }, 3000);
+    } else {
+      errorEl.textContent = 'Invalid token — check and try again.';
+    }
+  } catch(e) { errorEl.textContent = 'Connection failed: ' + e.message; }
 }
 </script>
 </body>
