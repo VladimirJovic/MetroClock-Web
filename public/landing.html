@@ -1,0 +1,1473 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MetroClock — Enterprise Time Tracking</title>
+<link rel="icon" href="icon.png"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ── Design Tokens ── */
+:root {
+  --bg:        #141417;
+  --surface:   #19191E;
+  --surface2:  #1D1D23;
+  --border:    #23232A;
+  --border2:   #2B2B37;
+  --orange:    #EA4500;
+  --orange-dim:#7A2400;
+  --orange-glow: rgba(234,69,0,0.18);
+  --text:      #FFFFFF;
+  --text-2:    #888899;
+  --text-3:    #555566;
+  --text-4:    #2E2E3A;
+  --green:     #2DD47E;
+  --red:       #F55252;
+  --font:      'Plus Jakarta Sans', sans-serif;
+  --mono:      'DM Mono', monospace;
+  --r4: 4px; --r8: 8px; --r12: 12px; --r16: 16px; --r24: 24px; --r999: 999px;
+}
+
+/* ── Reset ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+img { display: block; max-width: 100%; }
+
+/* ── Canvas bg ── */
+#canvas-bg {
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 0;
+  opacity: 0.35;
+}
+
+/* ── Orbs ── */
+.orb {
+  position: fixed; border-radius: 50%;
+  filter: blur(120px); pointer-events: none; z-index: 0;
+}
+.orb-1 { width: 600px; height: 600px; background: rgba(234,69,0,0.07); top: -200px; right: -100px; animation: orb-drift 18s ease-in-out infinite alternate; }
+.orb-2 { width: 500px; height: 500px; background: rgba(100,60,200,0.05); bottom: 10%; left: -150px; animation: orb-drift 22s ease-in-out infinite alternate-reverse; }
+.orb-3 { width: 400px; height: 400px; background: rgba(234,69,0,0.04); bottom: 30%; right: 10%; animation: orb-drift 16s ease-in-out infinite alternate; }
+@keyframes orb-drift { 0%{transform:translate(0,0) scale(1)} 100%{transform:translate(40px,60px) scale(1.15)} }
+
+/* ── Layout ── */
+.container { max-width: 1200px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+  background: rgba(7,7,10,0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  transition: border-color 0.3s;
+}
+.nav-inner {
+  max-width: 1200px; margin: 0 auto; padding: 0 32px;
+  height: 64px; display: flex; align-items: center; justify-content: space-between;
+}
+.nav-logo {
+  display: flex; align-items: center; gap: 10px;
+}
+.nav-logo img { width: 30px; height: 30px; border-radius: 8px; }
+.nav-logo-name { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+.nav-logo-by { font-size: 11px; color: var(--text-3); margin-top: 1px; letter-spacing: 0.5px; }
+.nav-links { display: flex; align-items: center; gap: 32px; }
+.nav-links a { font-size: 14px; font-weight: 500; color: var(--text-2); transition: color 0.2s; }
+.nav-links a:hover { color: var(--text); }
+.nav-cta {
+  background: var(--orange); color: #fff;
+  font-size: 14px; font-weight: 600; letter-spacing: 0.3px;
+  padding: 10px 22px; border-radius: var(--r8);
+  transition: opacity 0.2s, transform 0.2s;
+}
+.nav-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+.lang-toggle {
+  background: transparent; color: var(--text-2);
+  font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 1px;
+  padding: 6px 12px; border-radius: var(--r8);
+  border: 1px solid var(--border2);
+  cursor: pointer; transition: color 0.2s, border-color 0.2s;
+}
+.lang-toggle:hover { color: var(--text); border-color: var(--text-3); }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+
+/* ── HERO ── */
+.hero {
+  min-height: 100vh;
+  display: flex; align-items: center;
+  padding: 120px 0 80px;
+  overflow: hidden;
+}
+.hero-inner {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 64px; align-items: center;
+}
+.hero-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(234,69,0,0.12); border: 1px solid rgba(234,69,0,0.3);
+  border-radius: var(--r999); padding: 6px 14px;
+  font-size: 12px; font-weight: 600; color: var(--orange);
+  letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 28px;
+}
+.hero-badge-dot {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--orange);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%,100%{box-shadow:0 0 0 0 rgba(234,69,0,0.6)}
+  50%{box-shadow:0 0 0 6px rgba(234,69,0,0)}
+}
+.hero-title {
+  font-size: clamp(38px, 5vw, 64px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -2px;
+  margin-bottom: 24px;
+}
+.hero-title em { font-style: normal; color: var(--orange); }
+.hero-subtitle {
+  font-size: 17px; line-height: 1.75; color: var(--text-2);
+  max-width: 460px; margin-bottom: 40px;
+}
+.hero-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+.btn-primary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--orange); color: #fff;
+  font-size: 15px; font-weight: 700; letter-spacing: 0.3px;
+  padding: 14px 28px; border-radius: var(--r12);
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 0 0 rgba(234,69,0,0);
+}
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(234,69,0,0.35);
+}
+.btn-secondary {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: transparent; color: var(--text);
+  font-size: 15px; font-weight: 600; letter-spacing: 0.3px;
+  padding: 14px 28px; border-radius: var(--r12);
+  border: 1px solid var(--border2);
+  transition: border-color 0.2s, background 0.2s;
+}
+.btn-secondary:hover { border-color: var(--text-3); background: rgba(255,255,255,0.03); }
+.hero-trust { margin-top: 48px; display: flex; align-items: center; gap: 24px; }
+.hero-trust-text { font-size: 12px; color: var(--text-3); letter-spacing: 0.5px; text-transform: uppercase; }
+.hero-trust-logos { display: flex; gap: 16px; align-items: center; }
+.trust-badge {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r8); padding: 6px 12px;
+  font-size: 11px; font-weight: 600; color: var(--text-3); letter-spacing: 0.5px;
+}
+
+/* ── PHONE GROUP ── */
+.phone-group {
+  position: relative; height: 600px;
+  display: flex; align-items: center; justify-content: center;
+  perspective: 1200px;
+}
+.phone-wrap {
+  position: absolute;
+  transition: transform 0.1s ease-out;
+}
+.phone-wrap.center { z-index: 3; transform: rotateY(0deg) scale(1); }
+.phone-wrap.left   { z-index: 2; transform: translateX(-160px) rotateY(28deg) scale(0.82); }
+.phone-wrap.right  { z-index: 2; transform: translateX(160px)  rotateY(-28deg) scale(0.82); }
+.phone {
+  width: 240px; border-radius: 36px;
+  background: #141420;
+  border: 1.5px solid #282840;
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.6),
+    0 40px 80px rgba(0,0,0,0.6),
+    0 0 60px rgba(234,69,0,0.08),
+    inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden;
+  position: relative;
+}
+.phone-center { height: 520px; }
+.phone-side   { height: 480px; }
+.phone-notch {
+  position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+  width: 100px; height: 28px;
+  background: #0a0a14;
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  z-index: 10;
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.notch-cam { width: 10px; height: 10px; border-radius: 50%; background: #0f0f1a; border: 1px solid #1e1e2e; }
+.notch-dot { width: 6px; height: 6px; border-radius: 50%; background: #151520; }
+.phone-screen {
+  position: absolute; inset: 0;
+  background: #07070A;
+  font-family: var(--font);
+  overflow: hidden;
+}
+
+/* ── Phone screen content: Clock ── */
+.screen-clock { padding: 38px 16px 20px; display: flex; flex-direction: column; height: 100%; }
+.sc-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+.sc-greeting { font-size: 10px; font-weight: 600; color: var(--text-3); letter-spacing: 1px; text-transform: uppercase; }
+.sc-name { font-size: 16px; font-weight: 700; color: var(--text); margin-top: 2px; }
+.sc-chip {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--surface); border: 1px solid #191922;
+  border-radius: 100px; padding: 4px 10px;
+  font-size: 9px; font-weight: 700; color: var(--orange); letter-spacing: 0.5px;
+}
+.sc-chip-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--orange); animation: pulse-dot 2s infinite; }
+.sc-time-area { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.sc-flip-row { display: flex; align-items: center; gap: 5px; }
+.sc-digit {
+  width: 46px; height: 58px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--mono); font-size: 36px; font-weight: 500; color: var(--orange);
+  position: relative; overflow: hidden;
+}
+.sc-digit::after {
+  content: ''; position: absolute; left: 0; right: 0; top: 50%;
+  height: 1px; background: rgba(0,0,0,0.5);
+}
+.sc-colon { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--orange); margin: 0 2px; line-height: 1; }
+.sc-date { font-size: 9px; font-weight: 600; color: var(--text-4); letter-spacing: 1px; text-transform: uppercase; }
+.sc-holo {
+  width: 100px; height: 100px; border-radius: 50%; position: relative;
+  margin: 0 auto;
+  display: flex; align-items: center; justify-content: center;
+}
+.sc-holo-ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 0deg, #EA4500, #FF7030, #FFB347, #FF4500, #C13A00, #6B1E00, #EA4500);
+  animation: holo-spin 3s linear infinite;
+  filter: blur(1px);
+}
+@keyframes holo-spin { to { transform: rotate(360deg); } }
+.sc-holo-inner {
+  position: absolute; inset: 4px; border-radius: 50%;
+  background: #07070A;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+}
+.sc-holo-label { font-size: 8px; font-weight: 800; letter-spacing: 2px; color: var(--text); }
+.sc-holo-sub { font-size: 6px; color: var(--text-3); letter-spacing: 1px; }
+.sc-location { display: flex; align-items: center; gap: 5px; justify-content: center; font-size: 8px; color: var(--text-3); }
+.sc-loc-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--green); }
+
+/* ── Phone screen content: My Hours ── */
+.screen-hours { padding: 38px 0 0; }
+.sh-header { padding: 0 16px 12px; border-bottom: 1px solid var(--border); }
+.sh-title { font-size: 16px; font-weight: 700; }
+.sh-subtitle { font-size: 10px; color: var(--text-3); margin-top: 2px; }
+.sh-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px; border-bottom: 1px solid rgba(24,24,32,0.6);
+}
+.sh-item:last-child { border-bottom: none; }
+.sh-day { font-size: 10px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; }
+.sh-date { font-size: 9px; color: var(--text-4); margin-top: 1px; }
+.sh-hours { font-family: var(--mono); font-size: 13px; font-weight: 500; color: var(--text); }
+.sh-dot-in  { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.sh-dot-out { width: 6px; height: 6px; border-radius: 50%; background: var(--orange); }
+.sh-total { margin: 12px 16px 0; padding: 10px 14px; background: var(--surface); border-radius: var(--r8); border: 1px solid var(--border); display: flex; justify-content: space-between; }
+.sh-total-lbl { font-size: 9px; font-weight: 600; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.5px; line-height: 1.6; }
+.sh-total-val { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--orange); }
+
+/* ── Phone screen content: Requests ── */
+.screen-requests { padding: 38px 0 0; }
+.sr-header { padding: 0 16px 12px; border-bottom: 1px solid var(--border); }
+.sr-title { font-size: 16px; font-weight: 700; }
+.sr-card {
+  margin: 10px 14px 0;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r12); padding: 12px;
+}
+.sr-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.sr-type { font-size: 11px; font-weight: 700; }
+.sr-status {
+  font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 100px; letter-spacing: 0.3px;
+}
+.sr-status.approved { background: rgba(45,212,126,0.12); color: var(--green); }
+.sr-status.pending  { background: rgba(234,69,0,0.12); color: var(--orange); }
+.sr-status.rejected { background: rgba(245,82,82,0.12); color: var(--red); }
+.sr-date { font-size: 9px; color: var(--text-3); }
+.sr-note { font-size: 9px; color: var(--text-3); margin-top: 4px; font-style: italic; }
+
+/* ── STATS BAR ── */
+.stats-bar {
+  padding: 24px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface2);
+  position: relative; z-index: 1;
+}
+.stats-inner { display: flex; justify-content: center; gap: 64px; flex-wrap: wrap; }
+.stat { text-align: center; }
+.stat-value { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--orange); line-height: 1; }
+.stat-label { font-size: 12px; color: var(--text-3); margin-top: 4px; letter-spacing: 0.5px; text-transform: uppercase; }
+
+/* ── SECTION COMMON ── */
+section { position: relative; z-index: 1; }
+.section-eyebrow {
+  display: inline-block; font-size: 11px; font-weight: 700;
+  color: var(--orange); letter-spacing: 2px; text-transform: uppercase;
+  margin-bottom: 16px;
+}
+.section-title { font-size: clamp(28px, 4vw, 44px); font-weight: 800; line-height: 1.1; letter-spacing: -1px; margin-bottom: 20px; }
+.section-subtitle { font-size: 17px; color: var(--text-2); line-height: 1.7; max-width: 540px; }
+
+/* ── FEATURES ── */
+.features { padding: 120px 0; }
+.features-header { text-align: center; margin-bottom: 72px; }
+.features-header .section-subtitle { margin: 0 auto; }
+.features-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.feature-card {
+  background: var(--surface);
+  padding: 40px 36px;
+  border: 1px solid var(--border);
+  transition: background 0.3s, border-color 0.3s, transform 0.3s;
+  cursor: default;
+}
+.feature-card:hover { background: #111118; border-color: var(--border2); transform: translateY(-4px); }
+.feature-card:nth-child(1) { border-radius: var(--r16) 0 0 0; }
+.feature-card:nth-child(3) { border-radius: 0 var(--r16) 0 0; }
+.feature-card:nth-child(4) { border-radius: 0 0 0 var(--r16); }
+.feature-card:nth-child(6) { border-radius: 0 0 var(--r16) 0; }
+.feature-icon {
+  width: 48px; height: 48px; border-radius: var(--r12);
+  background: rgba(234,69,0,0.1); border: 1px solid rgba(234,69,0,0.2);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 24px;
+}
+.feature-icon svg { width: 22px; height: 22px; stroke: var(--orange); }
+.feature-title { font-size: 17px; font-weight: 700; margin-bottom: 10px; }
+.feature-desc { font-size: 14px; line-height: 1.7; color: var(--text-2); }
+
+/* ── SHOWCASE ── */
+.showcase { padding: 120px 0; overflow: hidden; }
+.showcase-inner { display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+.showcase-phone-wrap {
+  display: flex; justify-content: center; position: relative;
+  perspective: 800px;
+}
+.showcase-phone-outer {
+  transform: rotateY(-12deg) rotateX(4deg);
+  transform-style: preserve-3d;
+  transition: transform 0.3s ease;
+}
+.showcase-phone-outer:hover { transform: rotateY(-4deg) rotateX(2deg); }
+.showcase-phone {
+  width: 280px; border-radius: 42px;
+  background: #141420;
+  border: 1.5px solid #282840;
+  box-shadow: 0 60px 120px rgba(0,0,0,0.7), 0 0 80px rgba(234,69,0,0.12), inset 0 1px 0 rgba(255,255,255,0.06);
+  overflow: hidden;
+  position: relative;
+}
+.showcase-phone .phone-notch { width: 110px; }
+.feature-list { display: flex; flex-direction: column; gap: 28px; }
+.feature-item { display: flex; gap: 20px; align-items: flex-start; }
+.feature-item-icon {
+  width: 40px; height: 40px; flex-shrink: 0;
+  border-radius: var(--r12);
+  background: rgba(234,69,0,0.08); border: 1px solid rgba(234,69,0,0.15);
+  display: flex; align-items: center; justify-content: center;
+  margin-top: 2px;
+}
+.feature-item-icon svg { width: 18px; height: 18px; stroke: var(--orange); }
+.feature-item-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.feature-item-desc { font-size: 14px; color: var(--text-2); line-height: 1.65; }
+
+/* ── PLATFORMS ── */
+.platforms { padding: 120px 0; }
+.platforms-header { text-align: center; margin-bottom: 72px; }
+.platforms-header .section-subtitle { margin: 0 auto; }
+.platforms-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.platform-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r24); padding: 48px;
+  position: relative; overflow: hidden;
+  transition: border-color 0.3s, transform 0.3s;
+}
+.platform-card:hover { border-color: var(--border2); transform: translateY(-4px); }
+.platform-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(234,69,0,0.4), transparent);
+}
+.platform-glyph {
+  width: 64px; height: 64px; border-radius: var(--r16);
+  background: rgba(234,69,0,0.1); border: 1px solid rgba(234,69,0,0.2);
+  display: flex; align-items: center; justify-content: center;
+  margin-bottom: 28px;
+}
+.platform-glyph svg { width: 30px; height: 30px; }
+.platform-name { font-size: 24px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px; }
+.platform-stack { font-size: 13px; color: var(--orange); font-weight: 600; letter-spacing: 0.3px; margin-bottom: 24px; }
+.platform-features { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+.platform-features li { display: flex; gap: 10px; font-size: 14px; color: var(--text-2); align-items: flex-start; }
+.pf-check { width: 18px; height: 18px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── ROLES ── */
+.roles { padding: 120px 0; }
+.roles-header { text-align: center; margin-bottom: 72px; }
+.roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; }
+.role-card {
+  background: var(--surface); border: 1px solid var(--border);
+  padding: 40px 36px;
+  transition: background 0.3s, transform 0.3s;
+}
+.role-card:first-child { border-radius: var(--r16) 0 0 var(--r16); }
+.role-card:last-child  { border-radius: 0 var(--r16) var(--r16) 0; }
+.role-card:hover { background: var(--surface2); transform: translateY(-4px); }
+.role-badge {
+  display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  padding: 4px 12px; border-radius: var(--r999); margin-bottom: 20px;
+}
+.role-badge.employee { background: rgba(45,212,126,0.12); color: var(--green); border: 1px solid rgba(45,212,126,0.2); }
+.role-badge.manager  { background: rgba(234,69,0,0.12); color: var(--orange); border: 1px solid rgba(234,69,0,0.2); }
+.role-badge.admin    { background: rgba(150,120,255,0.12); color: #9B8EFF; border: 1px solid rgba(150,120,255,0.2); }
+.role-title { font-size: 20px; font-weight: 800; margin-bottom: 8px; }
+.role-desc { font-size: 14px; color: var(--text-2); line-height: 1.65; margin-bottom: 24px; }
+.role-perms { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.role-perms li { display: flex; gap: 8px; font-size: 13px; color: var(--text-2); }
+.rp-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--orange); flex-shrink: 0; margin-top: 8px; }
+
+/* ── INTEGRATIONS ── */
+.integrations { padding: 120px 0; }
+.integrations-header { text-align: center; margin-bottom: 72px; }
+.int-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+.int-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r16); padding: 32px 24px;
+  text-align: center; transition: border-color 0.3s, transform 0.3s;
+}
+.int-card:hover { border-color: var(--border2); transform: translateY(-4px); }
+.int-logo {
+  width: 56px; height: 56px; border-radius: var(--r12);
+  margin: 0 auto 16px;
+  background: var(--surface2); border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+}
+.int-logo svg { width: 28px; height: 28px; }
+.int-name { font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+.int-desc { font-size: 13px; color: var(--text-2); line-height: 1.5; }
+
+/* ── CTA ── */
+.cta-section { padding: 160px 0; text-align: center; position: relative; overflow: hidden; }
+.cta-section::before {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(ellipse 80% 60% at 50% 50%, rgba(234,69,0,0.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.cta-title { font-size: clamp(36px, 5vw, 64px); font-weight: 800; letter-spacing: -2px; line-height: 1.05; margin-bottom: 24px; }
+.cta-subtitle { font-size: 18px; color: var(--text-2); max-width: 500px; margin: 0 auto 48px; line-height: 1.7; }
+.cta-email {
+  display: inline-flex; align-items: center; gap: 12px;
+  font-size: 18px; font-weight: 600;
+  color: var(--text); background: var(--surface);
+  border: 1px solid var(--border2); border-radius: var(--r16);
+  padding: 18px 32px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cta-email:hover { border-color: var(--orange); box-shadow: 0 0 40px rgba(234,69,0,0.15); }
+.cta-email svg { width: 20px; height: 20px; stroke: var(--orange); }
+.cta-actions { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; margin-top: 24px; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 48px 0;
+}
+.footer-inner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 24px; }
+.footer-logo { display: flex; align-items: center; gap: 10px; }
+.footer-logo img { width: 28px; height: 28px; border-radius: 7px; }
+.footer-logo-text { font-size: 14px; font-weight: 700; }
+.footer-links { display: flex; gap: 32px; }
+.footer-links a { font-size: 14px; color: var(--text-3); transition: color 0.2s; }
+.footer-links a:hover { color: var(--text-2); }
+.footer-copy { font-size: 13px; color: var(--text-4); }
+
+/* ── SCROLL ANIMATIONS ── */
+.reveal { opacity: 0; transform: translateY(32px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal.visible { opacity: 1; transform: translateY(0); }
+.reveal-left  { opacity: 0; transform: translateX(-40px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal-left.visible  { opacity: 1; transform: translateX(0); }
+.reveal-right { opacity: 0; transform: translateX(40px); transition: opacity 0.7s ease, transform 0.7s ease; }
+.reveal-right.visible { opacity: 1; transform: translateX(0); }
+.stagger > * { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.stagger.visible > *:nth-child(1) { opacity:1; transform:none; transition-delay:0.0s; }
+.stagger.visible > *:nth-child(2) { opacity:1; transform:none; transition-delay:0.1s; }
+.stagger.visible > *:nth-child(3) { opacity:1; transform:none; transition-delay:0.2s; }
+.stagger.visible > *:nth-child(4) { opacity:1; transform:none; transition-delay:0.3s; }
+.stagger.visible > *:nth-child(5) { opacity:1; transform:none; transition-delay:0.4s; }
+.stagger.visible > *:nth-child(6) { opacity:1; transform:none; transition-delay:0.5s; }
+
+/* ── Number counter ── */
+.count-up { display: inline-block; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .hero-inner       { grid-template-columns: 1fr; }
+  .phone-group      { display: none; }
+  .hero-title       { font-size: 38px; }
+  .features-grid    { grid-template-columns: 1fr; }
+  .feature-card     { border-radius: 0 !important; }
+  .feature-card:first-child { border-radius: var(--r16) var(--r16) 0 0 !important; }
+  .feature-card:last-child  { border-radius: 0 0 var(--r16) var(--r16) !important; }
+  .showcase-inner   { grid-template-columns: 1fr; }
+  .showcase-phone-wrap { order: -1; }
+  .platforms-grid   { grid-template-columns: 1fr; }
+  .roles-grid       { grid-template-columns: 1fr; }
+  .role-card:first-child, .role-card:last-child { border-radius: 0; }
+  .role-card:first-child { border-radius: var(--r16) var(--r16) 0 0 !important; }
+  .role-card:last-child  { border-radius: 0 0 var(--r16) var(--r16) !important; }
+  .int-grid         { grid-template-columns: repeat(2, 1fr); }
+  .nav-links        { display: none; }
+  .stats-inner      { gap: 32px; }
+}
+
+/* Live time digits */
+@keyframes digit-flip {
+  0%   { transform: scaleY(1); }
+  45%  { transform: scaleY(0.03); }
+  55%  { transform: scaleY(0.03); }
+  100% { transform: scaleY(1); }
+}
+.flip-anim { animation: digit-flip 1s ease-in-out; }
+</style>
+</head>
+<body>
+
+<canvas id="canvas-bg"></canvas>
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <a href="#" class="nav-logo">
+      <img src="icon.png" alt="MetroClock"/>
+      <div>
+        <div class="nav-logo-name">MetroClock</div>
+        <div class="nav-logo-by">by EchoSoft</div>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="#features" data-i18n="nav_features">Funkcionalnosti</a>
+      <a href="#platforms" data-i18n="nav_platforms">Platforme</a>
+      <a href="#roles" data-i18n="nav_roles">Uloge</a>
+      <a href="#integrations" data-i18n="nav_integrations">Integracije</a>
+    </div>
+    <div class="nav-right">
+      <button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">EN</button>
+      <a href="mailto:info@ehcosystem.rs" class="nav-cta" data-i18n="nav_cta">Kontaktirajte nas</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-inner">
+      <div class="hero-content">
+        <div class="hero-badge reveal">
+          <div class="hero-badge-dot"></div>
+          <span data-i18n="hero_badge">Za preduzeća</span>
+        </div>
+        <h1 class="hero-title reveal" data-i18n-html="hero_title">
+          Evidencija<br/>
+          vremena.<br/>
+          <em>Precizno</em><br/>
+          napravljeno.
+        </h1>
+        <p class="hero-subtitle reveal" data-i18n="hero_subtitle">
+          GPS i WiFi verifikacija dolazaka, tokovi rada prema ulozi i interfejs koji vaš tim zaista voli — napravljeno nativno za iOS i Android.
+        </p>
+        <div class="hero-actions reveal">
+          <a href="mailto:info@ehcosystem.rs" class="btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            <span data-i18n="hero_demo">Zatražite demo</span>
+          </a>
+          <a href="guide.html" class="btn-secondary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><circle cx="12" cy="12" r="10"/><polygon points="10,8 16,12 10,16"/></svg>
+            <span data-i18n="hero_guide">Pogledajte vodič</span>
+          </a>
+        </div>
+        <div class="hero-trust reveal">
+          <span class="hero-trust-text" data-i18n="hero_trust">Izgrađeno na</span>
+          <div class="hero-trust-logos">
+            <div class="trust-badge">Firebase</div>
+            <div class="trust-badge">SwiftUI</div>
+            <div class="trust-badge">Jetpack Compose</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3D Phone Group -->
+      <div class="phone-group" id="phoneGroup">
+        <!-- LEFT: Requests -->
+        <div class="phone-wrap left">
+          <div class="phone phone-side">
+            <div class="phone-notch"><div class="notch-dot"></div><div class="notch-cam"></div><div class="notch-dot"></div></div>
+            <div class="phone-screen">
+              <div class="screen-requests">
+                <div class="sr-header">
+                  <div class="sh-title" style="font-size:14px">Requests</div>
+                </div>
+                <div class="sr-card">
+                  <div class="sr-card-top">
+                    <span class="sr-type">Remote Work</span>
+                    <span class="sr-status approved">Approved</span>
+                  </div>
+                  <div class="sr-date">Mon, 23 Mar 2026</div>
+                </div>
+                <div class="sr-card">
+                  <div class="sr-card-top">
+                    <span class="sr-type">Day Off</span>
+                    <span class="sr-status pending">Pending</span>
+                  </div>
+                  <div class="sr-date">25 – 26 Mar 2026</div>
+                </div>
+                <div class="sr-card">
+                  <div class="sr-card-top">
+                    <span class="sr-type">Overtime</span>
+                    <span class="sr-status rejected">Rejected</span>
+                  </div>
+                  <div class="sr-date">Fri, 20 Mar 2026</div>
+                  <div class="sr-note">"Deadline extended to next week"</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CENTER: Clock -->
+        <div class="phone-wrap center">
+          <div class="phone phone-center">
+            <div class="phone-notch"><div class="notch-dot"></div><div class="notch-cam"></div><div class="notch-dot"></div></div>
+            <div class="phone-screen">
+              <div class="screen-clock">
+                <div class="sc-header">
+                  <div>
+                    <div class="sc-greeting">Good Morning</div>
+                    <div class="sc-name">Marko</div>
+                  </div>
+                  <div class="sc-chip">
+                    <div class="sc-chip-dot"></div>
+                    NOT IN
+                  </div>
+                </div>
+                <div class="sc-time-area">
+                  <div class="sc-flip-row">
+                    <div class="sc-digit" id="d1">0</div>
+                    <div class="sc-digit" id="d2">9</div>
+                    <div class="sc-colon">:</div>
+                    <div class="sc-digit" id="d3">4</div>
+                    <div class="sc-digit" id="d4">1</div>
+                  </div>
+                  <div class="sc-date" id="sc-date-lbl">MONDAY, 23 MARCH</div>
+                  <div class="sc-holo">
+                    <div class="sc-holo-ring"></div>
+                    <div class="sc-holo-inner">
+                      <div class="sc-holo-label">CLOCK IN</div>
+                      <div class="sc-holo-sub">Tap to start</div>
+                    </div>
+                  </div>
+                </div>
+                <div class="sc-location">
+                  <div class="sc-loc-dot"></div>
+                  Echo Office · WiFi Verified
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: My Hours -->
+        <div class="phone-wrap right">
+          <div class="phone phone-side">
+            <div class="phone-notch"><div class="notch-dot"></div><div class="notch-cam"></div><div class="notch-dot"></div></div>
+            <div class="phone-screen">
+              <div class="screen-hours">
+                <div class="sh-header">
+                  <div class="sh-title" style="font-size:14px">My Hours</div>
+                  <div class="sh-subtitle">March 2026</div>
+                </div>
+                <div class="sh-item">
+                  <div><div class="sh-day">Mon</div><div class="sh-date">23 Mar</div></div>
+                  <div class="sh-dot-in"></div>
+                  <div class="sh-hours">8h 45m</div>
+                </div>
+                <div class="sh-item">
+                  <div><div class="sh-day">Fri</div><div class="sh-date">21 Mar</div></div>
+                  <div class="sh-dot-in"></div>
+                  <div class="sh-hours">9h 12m</div>
+                </div>
+                <div class="sh-item">
+                  <div><div class="sh-day">Thu</div><div class="sh-date">20 Mar</div></div>
+                  <div class="sh-dot-in"></div>
+                  <div class="sh-hours">8h 30m</div>
+                </div>
+                <div class="sh-item">
+                  <div><div class="sh-day">Wed</div><div class="sh-date">19 Mar</div></div>
+                  <div class="sh-dot-in"></div>
+                  <div class="sh-hours">7h 55m</div>
+                </div>
+                <div class="sh-total">
+                  <div class="sh-total-lbl">This<br/>Month</div>
+                  <div class="sh-total-val">152h</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── STATS BAR ── -->
+<div class="stats-bar reveal">
+  <div class="stats-inner stagger">
+    <div class="stat">
+      <div class="stat-value"><span class="count-up" data-target="99.9">0</span>%</div>
+      <div class="stat-label" data-i18n="stat_uptime">Dostupnost</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">&lt;<span class="count-up" data-target="200">0</span>ms</div>
+      <div class="stat-label" data-i18n="stat_latency">Kašnjenje pri dolasku</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value"><span class="count-up" data-target="2">0</span></div>
+      <div class="stat-label" data-i18n="stat_platforms">Nativne platforme</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value"><span class="count-up" data-target="3">0</span></div>
+      <div class="stat-label" data-i18n="stat_tiers">Nivoi pristupa</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value"><span class="count-up" data-target="100">0</span>%</div>
+      <div class="stat-label" data-i18n="stat_location">Verifikacija lokacije</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FEATURES ── -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="features-header reveal">
+      <span class="section-eyebrow" data-i18n="feat_eyebrow">Ključne mogućnosti</span>
+      <h2 class="section-title" data-i18n-html="feat_title">Sve što vašem timu treba.<br/>Ništa više.</h2>
+      <p class="section-subtitle" data-i18n="feat_subtitle">Precizno napravljene funkcije koje pokrivaju ceo životni ciklus zaposlenih — od dolaska do odlaska.</p>
+    </div>
+    <div class="features-grid stagger">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 22s-8-4.5-8-11.8A8 8 0 0 1 12 2a8 8 0 0 1 8 8.2c0 7.3-8 11.8-8 11.8z" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="feature-title" data-i18n="feat1_title">GPS + WiFi verifikacija</div>
+        <div class="feature-desc" data-i18n="feat1_desc">Dvoslojna verifikacija lokacije — primarna provera WiFi SSID-a sa GPS Haversine rezervom. Dolasci se prihvataju samo sa verifikovanih lokacija kancelarije.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="3" y1="10" x2="21" y2="10" stroke-linecap="round"/><line x1="8" y1="2" x2="8" y2="6" stroke-linecap="round"/><line x1="16" y1="2" x2="16" y2="6" stroke-linecap="round"/></svg>
+        </div>
+        <div class="feature-title" data-i18n="feat2_title">Interfejs flip sata</div>
+        <div class="feature-desc" data-i18n="feat2_desc">Prikaz u realnom vremenu sa karakterističnom flip animacijom cifara. Holografsko dugme za dolazak čini primarnu akciju nemogućom za promašiti.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="9" cy="7" r="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="feature-title" data-i18n="feat3_title">Pristup prema ulozi</div>
+        <div class="feature-desc" data-i18n="feat3_desc">Tri nivoa — Administrator, Menadžer i Zaposleni — svaki sa prilagođenim ekranima i dozvolama. Menadžeri vide samo svoje neposredne podređene.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke-linecap="round" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" stroke-linecap="round" stroke-linejoin="round"/><line x1="16" y1="13" x2="8" y2="13" stroke-linecap="round"/><line x1="16" y1="17" x2="8" y2="17" stroke-linecap="round"/><polyline points="10 9 9 9 8 9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="feature-title" data-i18n="feat4_title">Tok zahteva</div>
+        <div class="feature-desc" data-i18n="feat4_desc">Zahtevi za daljinski rad, bolovanje, slobodan dan i prekovremeni — svaki sa menadžerskim odobrenjem, odbijanjem sa napomenom i automatskim rešavanjem konflikata.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22 4 12 14.01 9 11.01" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="feature-title" data-i18n="feat5_title">Detekcija prekovremenog</div>
+        <div class="feature-desc" data-i18n="feat5_desc">Automatska detekcija prekovremenog rada pri odlasku. Kada radni sati pređu planirani raspored, zaposleni je odmah upitan da doda napomenu.</div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M18 20V10M12 20V4M6 20v-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="feature-title" data-i18n="feat6_title">Pregled sati tima</div>
+        <div class="feature-desc" data-i18n="feat6_desc">Menadžeri pregledaju poslednjih 30 dana evidencije za svakog neposrednog podređenog. Pun CRUD za zapise i daljinski rad — ispravke za nekoliko sekundi.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SHOWCASE ── -->
+<section class="showcase">
+  <div class="container">
+    <div class="showcase-inner">
+      <div class="showcase-phone-wrap reveal-left">
+        <div class="showcase-phone-outer" id="showcasePhone">
+          <div class="showcase-phone">
+            <div class="phone-notch" style="width:110px"><div class="notch-dot"></div><div class="notch-cam"></div><div class="notch-dot"></div></div>
+            <div class="phone-screen" style="height:600px">
+              <div class="screen-hours" style="padding-top:42px">
+                <div class="sh-header">
+                  <div style="font-size:15px;font-weight:700;">Team Hours</div>
+                  <div class="sh-subtitle">March 2026 · 5 members</div>
+                </div>
+                <!-- Team member rows -->
+                <div style="padding:10px 16px;border-bottom:1px solid var(--border);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="width:28px;height:28px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;">MJ</div>
+                      <div>
+                        <div style="font-size:11px;font-weight:600;">Marko Jovanović</div>
+                        <div style="font-size:9px;color:var(--text-3)">Employee</div>
+                      </div>
+                    </div>
+                    <div style="font-family:var(--mono);font-size:13px;color:var(--text)">168h 20m</div>
+                  </div>
+                  <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="height:100%;width:78%;background:var(--orange);border-radius:2px;"></div></div>
+                </div>
+                <div style="padding:10px 16px;border-bottom:1px solid var(--border);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="width:28px;height:28px;border-radius:50%;background:#2D3A8C;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;">SM</div>
+                      <div>
+                        <div style="font-size:11px;font-weight:600;">Stefan Miletić</div>
+                        <div style="font-size:9px;color:var(--text-3)">Employee</div>
+                      </div>
+                    </div>
+                    <div style="font-family:var(--mono);font-size:13px;color:var(--text)">172h 05m</div>
+                  </div>
+                  <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="height:100%;width:92%;background:var(--green);border-radius:2px;"></div></div>
+                </div>
+                <div style="padding:10px 16px;border-bottom:1px solid var(--border);">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="width:28px;height:28px;border-radius:50%;background:#1A3A2A;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--green);">JS</div>
+                      <div>
+                        <div style="font-size:11px;font-weight:600;">Jelena Savić</div>
+                        <div style="font-size:9px;color:var(--text-3)">Employee</div>
+                      </div>
+                    </div>
+                    <div style="font-family:var(--mono);font-size:13px;color:var(--text)">155h 40m</div>
+                  </div>
+                  <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="height:100%;width:65%;background:var(--orange);border-radius:2px;"></div></div>
+                </div>
+                <div style="padding:10px 16px;">
+                  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div style="width:28px;height:28px;border-radius:50%;background:#2A1A3A;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#9B8EFF;">AP</div>
+                      <div>
+                        <div style="font-size:11px;font-weight:600;">Ana Petrović</div>
+                        <div style="font-size:9px;color:var(--text-3)">Employee</div>
+                      </div>
+                    </div>
+                    <div style="font-family:var(--mono);font-size:13px;color:var(--text)">163h 15m</div>
+                  </div>
+                  <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden"><div style="height:100%;width:84%;background:#9B8EFF;border-radius:2px;"></div></div>
+                </div>
+                <!-- Summary card -->
+                <div style="margin:14px 14px 0;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;">
+                    <div style="font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.5px;">Team Total</div>
+                    <div style="font-family:var(--mono);font-size:18px;font-weight:500;color:var(--orange)">659h</div>
+                  </div>
+                  <div style="margin-top:8px;display:flex;gap:6px;">
+                    <div style="flex:1;background:rgba(45,212,126,0.1);border:1px solid rgba(45,212,126,0.2);border-radius:6px;padding:6px 8px;text-align:center;">
+                      <div style="font-size:10px;font-weight:700;color:var(--green)">4</div>
+                      <div style="font-size:8px;color:var(--text-3)">On Track</div>
+                    </div>
+                    <div style="flex:1;background:rgba(234,69,0,0.1);border:1px solid rgba(234,69,0,0.2);border-radius:6px;padding:6px 8px;text-align:center;">
+                      <div style="font-size:10px;font-weight:700;color:var(--orange)">1</div>
+                      <div style="font-size:8px;color:var(--text-3)">Low Hours</div>
+                    </div>
+                    <div style="flex:1;background:rgba(150,120,255,0.1);border:1px solid rgba(150,120,255,0.2);border-radius:6px;padding:6px 8px;text-align:center;">
+                      <div style="font-size:10px;font-weight:700;color:#9B8EFF">2</div>
+                      <div style="font-size:8px;color:var(--text-3)">Requests</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal-right">
+        <span class="section-eyebrow" data-i18n="show_eyebrow">Menadžerski prikaz</span>
+        <h2 class="section-title" data-i18n-html="show_title">Vaš tim.<br/>Na jednom mestu.</h2>
+        <div class="feature-list">
+          <div class="feature-item">
+            <div class="feature-item-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M18 20V10M12 20V4M6 20v-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <div class="feature-item-title" data-i18n="show_f1_title">Istorija 30 dana</div>
+              <div class="feature-item-desc" data-i18n="show_f1_desc">Svaki zapis dolaska za svakog neposrednog podređenog — poslednjih 30 dana, sa inline uređivanjem i brisanjem.</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-item-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <div class="feature-item-title" data-i18n="show_f2_title">Puna kontrola</div>
+              <div class="feature-item-desc" data-i18n="show_f2_desc">Dodajte propuštene dolaske, ispravite pogrešne vremenske markere i beležite daljinski rad — sve sa ekrana Sati tima.</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-item-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M18 8h1a4 4 0 0 1 0 8h-1M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8zM6 1v3M10 1v3M14 1v3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <div>
+              <div class="feature-item-title" data-i18n="show_f3_title">Trenutne notifikacije</div>
+              <div class="feature-item-desc" data-i18n="show_f3_desc">Push obaveštenja se šalju čim zaposleni podnese zahtev — a zaposleni su odmah obavešteni o odobrenju ili odbijanju.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── PLATFORMS ── -->
+<section class="platforms" id="platforms">
+  <div class="container">
+    <div class="platforms-header reveal">
+      <span class="section-eyebrow" data-i18n="plat_eyebrow">Nativne platforme</span>
+      <h2 class="section-title" data-i18n-html="plat_title">Napravljeno nativno.<br/>Ne samo portovano.</h2>
+      <p class="section-subtitle" data-i18n="plat_subtitle">Dva odvojena koda, svaki napravljen za svoju platformu — ne kompromis između platformi.</p>
+    </div>
+    <div class="platforms-grid stagger">
+      <div class="platform-card">
+        <div class="platform-glyph">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--orange)" stroke-width="1.5"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z" fill="var(--orange)" stroke="none"/><path d="M18.71 7.21l-1.42-1.42-1.42 1.42 1.42 1.42 1.42-1.42zM6.71 7.21L5.29 5.79 3.87 7.21l1.42 1.42 1.42-1.42zM12 1v2M12 21v2M22 12h-2M4 12H2" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="platform-name">iOS</div>
+        <div class="platform-stack">Swift · SwiftUI · iOS 14+</div>
+        <ul class="platform-features">
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--orange)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n-html="ios_f1"><code style="font-family:var(--mono);font-size:12px;color:var(--orange)">@Observable</code> makro — SwiftUI 6 upravljanje stanjem</span>
+          </li>
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--orange)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="ios_f2">Adaptivni tamni/svetli mod — automatski prati temu sistema</span>
+          </li>
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--orange)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="ios_f3">Firebase Auth, Firestore, Cloud Messaging (FCM)</span>
+          </li>
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--orange)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="ios_f4">Detekcija WiFi SSID-a + CoreLocation GPS</span>
+          </li>
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--orange)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--orange)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="ios_f5">Samo portret, optimizovano za jednoručno korišćenje</span>
+          </li>
+        </ul>
+      </div>
+      <div class="platform-card">
+        <div class="platform-glyph">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M7 2l1.5 3M17 2l-1.5 3" stroke="var(--green)" stroke-width="1.8" stroke-linecap="round"/><rect x="2" y="5" width="20" height="14" rx="3" stroke="var(--green)" stroke-width="1.5"/><circle cx="8" cy="12" r="1.2" fill="var(--green)"/><circle cx="12" cy="12" r="1.2" fill="var(--green)"/><circle cx="16" cy="12" r="1.2" fill="var(--green)"/></svg>
+        </div>
+        <div class="platform-name">Android</div>
+        <div class="platform-stack" style="color:var(--green)">Kotlin · Jetpack Compose · Material 3</div>
+        <ul class="platform-features">
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--green)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n-html="and_f1"><code style="font-family:var(--mono);font-size:12px;color:var(--green)">StateFlow</code> + Compose stanje — reaktivno bez ViewModel kompleksnosti</span>
+          </li>
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--green)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n-html="and_f2">Adaptivni tamni/svetli mod putem <code style="font-family:var(--mono);font-size:12px;color:var(--green)">isSystemInDarkTheme()</code></span>
+          </li>
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--green)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="and_f3">Fused Location Provider, provera svakih 10s sa Accompanist dozvolama</span>
+          </li>
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--green)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="and_f4">FCM V1 API — push notifikacije na pravim uređajima i emulatorima</span>
+          </li>
+          <li>
+            <svg class="pf-check" viewBox="0 0 18 18" fill="none"><circle cx="9" cy="9" r="8" stroke="var(--green)" stroke-width="1.2"/><path d="M5.5 9l2.5 2.5 4.5-4.5" stroke="var(--green)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span data-i18n="and_f5">WifiManager detekcija SSID-a sa ACCESS_WIFI_STATE dozvolom</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── ROLES ── -->
+<section class="roles" id="roles">
+  <div class="container">
+    <div class="roles-header reveal">
+      <span class="section-eyebrow" data-i18n="roles_eyebrow">Kontrola pristupa</span>
+      <h2 class="section-title" data-i18n-html="roles_title">Tri nivoa.<br/>Savršeno odvojena.</h2>
+    </div>
+    <div class="roles-grid stagger">
+      <div class="role-card">
+        <div class="role-badge employee" data-i18n="role1_badge">Zaposleni</div>
+        <div class="role-title" data-i18n="role1_title">Svakodnevni korisnik</div>
+        <div class="role-desc" data-i18n="role1_desc">Sve što zaposlenom treba da ostane usklađen i informisan — ništa više, ništa manje.</div>
+        <ul class="role-perms">
+          <li><div class="rp-dot"></div><span data-i18n="role1_p1">Dolazak/odlazak sa verifikacijom lokacije</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role1_p2">Pregled ličnih sati i istorije</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role1_p3">Podnošenje zahteva za odsustvo, daljinski rad i prekovremeni</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role1_p4">Izbor aktivnih ClickUp zadataka pri dolasku</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role1_p5">Primanje push notifikacija o ažuriranjima zahteva</span></li>
+        </ul>
+      </div>
+      <div class="role-card">
+        <div class="role-badge manager" data-i18n="role2_badge">Menadžer</div>
+        <div class="role-title" data-i18n="role2_title">Vođa tima</div>
+        <div class="role-desc" data-i18n="role2_desc">Puna vidljivost i kontrola nad neposrednim podređenima — odobri, odbij, ispravi i pregledaj.</div>
+        <ul class="role-perms">
+          <li><div class="rp-dot"></div><span data-i18n="role2_p1">Sve mogućnosti zaposlenog</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role2_p2">Pregled i uređivanje zapisa dolazaka tima</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role2_p3">Odobravanje ili odbijanje zahteva sa napomenama</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role2_p4">Beleženje daljinskih sati za članove tima</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role2_p5">Primanje push notifikacija za nove zahteve</span></li>
+        </ul>
+      </div>
+      <div class="role-card">
+        <div class="role-badge admin" data-i18n="role3_badge">Administrator</div>
+        <div class="role-title" data-i18n="role3_title">Operater</div>
+        <div class="role-desc" data-i18n="role3_desc">Potpuna kontrola radnog prostora putem web admin panela — korisnici, kancelarije, zapisi i konfiguracija.</div>
+        <ul class="role-perms">
+          <li><div class="rp-dot"></div><span data-i18n="role3_p1">Sve mogućnosti menadžera</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role3_p2">Upravljanje korisnicima i rasporedima</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role3_p3">Konfiguracija GPS + WiFi zona kancelarije</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role3_p4">Pun CRUD nad svim zapisima dolazaka</span></li>
+          <li><div class="rp-dot"></div><span data-i18n="role3_p5">Podešavanja radnog prostora i integracije</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── INTEGRATIONS ── -->
+<section class="integrations" id="integrations">
+  <div class="container">
+    <div class="integrations-header reveal">
+      <span class="section-eyebrow" data-i18n="int_eyebrow">Integracije</span>
+      <h2 class="section-title" data-i18n-html="int_title">Povezano sa alatima<br/>koje već koristite.</h2>
+    </div>
+    <div class="int-grid stagger">
+      <div class="int-card">
+        <div class="int-logo">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="var(--orange)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div class="int-name">Firebase</div>
+        <div class="int-desc" data-i18n="int1_desc">Auth, Firestore i Cloud Messaging pokreću celokupni backend — u realnom vremenu, skalabilno, bez održavanja.</div>
+      </div>
+      <div class="int-card">
+        <div class="int-logo">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="8" height="8" rx="1.5" stroke="var(--orange)" stroke-width="1.6"/><rect x="13" y="3" width="8" height="8" rx="1.5" stroke="var(--orange)" stroke-width="1.6"/><rect x="3" y="13" width="8" height="8" rx="1.5" stroke="var(--orange)" stroke-width="1.6"/><path d="M17 13v8M13 17h8" stroke="var(--orange)" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <div class="int-name">ClickUp</div>
+        <div class="int-desc" data-i18n="int2_desc">Zaposleni biraju aktivne zadatke pri dolasku. Vreme zadatka se vezuje za zapis dolaska radi tačnosti naplativih sati.</div>
+      </div>
+      <div class="int-card">
+        <div class="int-logo">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2.5" stroke="var(--text-3)" stroke-width="1.5"/><circle cx="19" cy="13" r="2.5" stroke="var(--text-3)" stroke-width="1.5"/><circle cx="5" cy="13" r="2.5" stroke="var(--text-3)" stroke-width="1.5"/><path d="M14.3 6.5L17 11M9.7 6.5L7 11M7.5 14.5l4 2M16.5 14.5l-4 2" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="int-name" style="color:var(--text-3)">Slack</div>
+        <div class="int-desc" style="color:var(--text-4)" data-i18n="int3_desc">Konfiguracija webhook-a je spremna — automatska obaveštenja kanala o zapisima (uskoro).</div>
+      </div>
+      <div class="int-card">
+        <div class="int-logo">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="5" r="2.5" stroke="var(--text-3)" stroke-width="1.5"/><path d="M7 8.5C5 9.5 4 11 4 12c0 3 3.5 5 8 5s8-2 8-5c0-1-.5-2-2-3" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round"/><path d="M12 17v4" stroke="var(--text-3)" stroke-width="1.5" stroke-linecap="round"/></svg>
+        </div>
+        <div class="int-name" style="color:var(--text-3)">Discord</div>
+        <div class="int-desc" style="color:var(--text-4)" data-i18n-html="int4_desc">Konfiguracija bot webhook-a se čuva po radnom prostoru — aktivnost tima se objavljuje u <code style="font-size:11px;font-family:var(--mono)">#metroclock</code> kanalu (uskoro).</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section">
+  <div class="container">
+    <div class="reveal">
+      <span class="section-eyebrow" data-i18n="cta_eyebrow">Počnite</span>
+      <h2 class="cta-title" data-i18n-html="cta_title">Spremni da unesete<br/><em style="color:var(--orange);font-style:normal;">preciznost</em> u vaš tim?</h2>
+      <p class="cta-subtitle" data-i18n="cta_subtitle">MetroClock je dostupan za enterprise primenu na iOS-u i Androidu. Obratite nam se da razgovaramo o potrebama vašeg tima.</p>
+      <div class="cta-actions">
+        <a href="mailto:info@ehcosystem.rs" class="btn-primary" style="font-size:16px;padding:16px 32px;">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          info@ehcosystem.rs
+        </a>
+        <a href="guide.html" class="btn-secondary" style="font-size:16px;padding:16px 32px;" data-i18n="cta_guide">Pogledajte vodič</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">
+        <img src="icon.png" alt="MetroClock"/>
+        <div>
+          <div class="footer-logo-text">MetroClock</div>
+          <div style="font-size:12px;color:var(--text-4)">by EchoSoft</div>
+        </div>
+      </div>
+      <div class="footer-links">
+        <a href="guide.html" data-i18n="footer_guide">Vodič</a>
+        <a href="index.html" data-i18n="footer_admin">Admin panel</a>
+        <a href="mailto:info@ehcosystem.rs" data-i18n="footer_contact">Kontakt</a>
+      </div>
+      <div class="footer-copy">
+        &copy; 2026 EchoSoft. <span data-i18n="footer_copy">Sva prava zadržana.</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- ── SCRIPTS ── -->
+<script>
+/* ── Canvas Particles ── */
+(function() {
+  const canvas = document.getElementById('canvas-bg');
+  const ctx    = canvas.getContext('2d');
+  let W, H, particles = [];
+  const PARTICLE_COUNT = 80;
+  const CONNECT_DIST   = 130;
+  const ORANGE         = '234,69,0';
+
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+
+  function Particle() {
+    this.x  = Math.random() * W;
+    this.y  = Math.random() * H;
+    this.vx = (Math.random() - 0.5) * 0.25;
+    this.vy = (Math.random() - 0.5) * 0.25;
+    this.r  = Math.random() * 1.5 + 0.5;
+    this.orange = Math.random() > 0.85;
+  }
+  Particle.prototype.update = function() {
+    this.x += this.vx; this.y += this.vy;
+    if (this.x < 0 || this.x > W) this.vx *= -1;
+    if (this.y < 0 || this.y > H) this.vy *= -1;
+  };
+
+  function init() {
+    particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.update();
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.orange ? `rgba(${ORANGE},0.6)` : 'rgba(255,255,255,0.2)';
+      ctx.fill();
+      for (let j = i + 1; j < particles.length; j++) {
+        const q  = particles[j];
+        const dx = p.x - q.x, dy = p.y - q.y;
+        const d  = Math.sqrt(dx*dx + dy*dy);
+        if (d < CONNECT_DIST) {
+          const alpha = (1 - d / CONNECT_DIST) * 0.08;
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y);
+          ctx.strokeStyle = `rgba(${ORANGE},${alpha})`;
+          ctx.lineWidth   = 0.8;
+          ctx.stroke();
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+
+  resize();
+  init();
+  draw();
+  window.addEventListener('resize', () => { resize(); init(); });
+})();
+
+/* ── i18n ── */
+const T = {
+  sr: {
+    nav_features:'Funkcionalnosti', nav_platforms:'Platforme', nav_roles:'Uloge',
+    nav_integrations:'Integracije', nav_cta:'Kontaktirajte nas',
+    hero_badge:'Za preduzeća',
+    hero_title:'Evidencija<br/>vremena.<br/><em>Precizno</em><br/>napravljeno.',
+    hero_subtitle:'GPS i WiFi verifikacija dolazaka, tokovi rada prema ulozi i interfejs koji vaš tim zaista voli — napravljeno nativno za iOS i Android.',
+    hero_demo:'Zatražite demo', hero_guide:'Pogledajte vodič', hero_trust:'Izgrađeno na',
+    stat_uptime:'Dostupnost', stat_latency:'Kašnjenje pri dolasku',
+    stat_platforms:'Nativne platforme', stat_tiers:'Nivoi pristupa', stat_location:'Verifikacija lokacije',
+    feat_eyebrow:'Ključne mogućnosti',
+    feat_title:'Sve što vašem timu treba.<br/>Ništa više.',
+    feat_subtitle:'Precizno napravljene funkcije koje pokrivaju ceo životni ciklus zaposlenih — od dolaska do odlaska.',
+    feat1_title:'GPS + WiFi verifikacija', feat1_desc:'Dvoslojna verifikacija lokacije — primarna provera WiFi SSID-a sa GPS Haversine rezervom. Dolasci se prihvataju samo sa verifikovanih lokacija kancelarije.',
+    feat2_title:'Interfejs flip sata', feat2_desc:'Prikaz u realnom vremenu sa karakterističnom flip animacijom cifara. Holografsko dugme za dolazak čini primarnu akciju nemogućom za promašiti.',
+    feat3_title:'Pristup prema ulozi', feat3_desc:'Tri nivoa — Administrator, Menadžer i Zaposleni — svaki sa prilagođenim ekranima i dozvolama. Menadžeri vide samo svoje neposredne podređene.',
+    feat4_title:'Tok zahteva', feat4_desc:'Zahtevi za daljinski rad, bolovanje, slobodan dan i prekovremeni — svaki sa menadžerskim odobrenjem, odbijanjem sa napomenom i automatskim rešavanjem konflikata.',
+    feat5_title:'Detekcija prekovremenog', feat5_desc:'Automatska detekcija prekovremenog rada pri odlasku. Kada radni sati pređu planirani raspored, zaposleni je odmah upitan da doda napomenu.',
+    feat6_title:'Pregled sati tima', feat6_desc:'Menadžeri pregledaju poslednjih 30 dana evidencije za svakog neposrednog podređenog. Pun CRUD za zapise i daljinski rad — ispravke za nekoliko sekundi.',
+    show_eyebrow:'Menadžerski prikaz', show_title:'Vaš tim.<br/>Na jednom mestu.',
+    show_f1_title:'Istorija 30 dana', show_f1_desc:'Svaki zapis dolaska za svakog neposrednog podređenog — poslednjih 30 dana, sa inline uređivanjem i brisanjem.',
+    show_f2_title:'Puna kontrola', show_f2_desc:'Dodajte propuštene dolaske, ispravite pogrešne vremenske markere i beležite daljinski rad — sve sa ekrana Sati tima.',
+    show_f3_title:'Trenutne notifikacije', show_f3_desc:'Push obaveštenja se šalju čim zaposleni podnese zahtev — a zaposleni su odmah obavešteni o odobrenju ili odbijanju.',
+    plat_eyebrow:'Nativne platforme', plat_title:'Napravljeno nativno.<br/>Ne samo portovano.',
+    plat_subtitle:'Dva odvojena koda, svaki napravljen za svoju platformu — ne kompromis između platformi.',
+    ios_f1:'<code style="font-family:var(--mono);font-size:12px;color:var(--orange)">@Observable</code> makro — SwiftUI 6 upravljanje stanjem',
+    ios_f2:'Adaptivni tamni/svetli mod — automatski prati temu sistema',
+    ios_f3:'Firebase Auth, Firestore, Cloud Messaging (FCM)',
+    ios_f4:'Detekcija WiFi SSID-a + CoreLocation GPS',
+    ios_f5:'Samo portret, optimizovano za jednoručno korišćenje',
+    and_f1:'<code style="font-family:var(--mono);font-size:12px;color:var(--green)">StateFlow</code> + Compose stanje — reaktivno bez ViewModel kompleksnosti',
+    and_f2:'Adaptivni tamni/svetli mod putem <code style="font-family:var(--mono);font-size:12px;color:var(--green)">isSystemInDarkTheme()</code>',
+    and_f3:'Fused Location Provider, provera svakih 10s sa Accompanist dozvolama',
+    and_f4:'FCM V1 API — push notifikacije na pravim uređajima i emulatorima',
+    and_f5:'WifiManager detekcija SSID-a sa ACCESS_WIFI_STATE dozvolom',
+    roles_eyebrow:'Kontrola pristupa', roles_title:'Tri nivoa.<br/>Savršeno odvojena.',
+    role1_badge:'Zaposleni', role1_title:'Svakodnevni korisnik', role1_desc:'Sve što zaposlenom treba da ostane usklađen i informisan — ništa više, ništa manje.',
+    role1_p1:'Dolazak/odlazak sa verifikacijom lokacije', role1_p2:'Pregled ličnih sati i istorije',
+    role1_p3:'Podnošenje zahteva za odsustvo, daljinski rad i prekovremeni',
+    role1_p4:'Izbor aktivnih ClickUp zadataka pri dolasku', role1_p5:'Primanje push notifikacija o ažuriranjima zahteva',
+    role2_badge:'Menadžer', role2_title:'Vođa tima', role2_desc:'Puna vidljivost i kontrola nad neposrednim podređenima — odobri, odbij, ispravi i pregledaj.',
+    role2_p1:'Sve mogućnosti zaposlenog', role2_p2:'Pregled i uređivanje zapisa dolazaka tima',
+    role2_p3:'Odobravanje ili odbijanje zahteva sa napomenama', role2_p4:'Beleženje daljinskih sati za članove tima',
+    role2_p5:'Primanje push notifikacija za nove zahteve',
+    role3_badge:'Administrator', role3_title:'Operater', role3_desc:'Potpuna kontrola radnog prostora putem web admin panela — korisnici, kancelarije, zapisi i konfiguracija.',
+    role3_p1:'Sve mogućnosti menadžera', role3_p2:'Upravljanje korisnicima i rasporedima',
+    role3_p3:'Konfiguracija GPS + WiFi zona kancelarije', role3_p4:'Pun CRUD nad svim zapisima dolazaka',
+    role3_p5:'Podešavanja radnog prostora i integracije',
+    int_eyebrow:'Integracije', int_title:'Povezano sa alatima<br/>koje već koristite.',
+    int1_desc:'Auth, Firestore i Cloud Messaging pokreću celokupni backend — u realnom vremenu, skalabilno, bez održavanja.',
+    int2_desc:'Zaposleni biraju aktivne zadatke pri dolasku. Vreme zadatka se vezuje za zapis dolaska radi tačnosti naplativih sati.',
+    int3_desc:'Konfiguracija webhook-a je spremna — automatska obaveštenja kanala o zapisima (uskoro).',
+    int4_desc:'Konfiguracija bot webhook-a se čuva po radnom prostoru — aktivnost tima se objavljuje u <code style="font-size:11px;font-family:var(--mono)">#metroclock</code> kanalu (uskoro).',
+    cta_eyebrow:'Počnite', cta_title:'Spremni da unesete<br/><em style="color:var(--orange);font-style:normal;">preciznost</em> u vaš tim?',
+    cta_subtitle:'MetroClock je dostupan za enterprise primenu na iOS-u i Androidu. Obratite nam se da razgovaramo o potrebama vašeg tima.',
+    cta_guide:'Pogledajte vodič',
+    footer_guide:'Vodič', footer_admin:'Admin panel', footer_contact:'Kontakt', footer_copy:'Sva prava zadržana.',
+    clock_days:['Nedjelja','Ponedeljak','Utorak','Sreda','Četvrtak','Petak','Subota'],
+    clock_months:['Januar','Februar','Mart','April','Maj','Jun','Jul','Avgust','Septembar','Oktobar','Novembar','Decembar'],
+  },
+  en: {
+    nav_features:'Features', nav_platforms:'Platforms', nav_roles:'Roles',
+    nav_integrations:'Integrations', nav_cta:'Get in Touch',
+    hero_badge:'Enterprise Ready',
+    hero_title:'Time Tracking.<br/><em>Precision</em><br/>Engineered.',
+    hero_subtitle:'GPS and WiFi-verified clock-ins, role-based workflows, and an interface your team will actually enjoy — built native for iOS and Android.',
+    hero_demo:'Request a Demo', hero_guide:'See the Guide', hero_trust:'Built on',
+    stat_uptime:'Uptime', stat_latency:'Clock-in Latency',
+    stat_platforms:'Native Platforms', stat_tiers:'Access Tiers', stat_location:'Location Verified',
+    feat_eyebrow:'Core Capabilities',
+    feat_title:'Everything your team needs.<br/>Nothing it doesn\'t.',
+    feat_subtitle:'Precision-engineered features that cover the full employee lifecycle — from arrival to sign-off.',
+    feat1_title:'GPS + WiFi Verification', feat1_desc:'Dual-layer location validation — primary WiFi SSID match with GPS Haversine fallback. Clock-ins are only accepted from verified office locations.',
+    feat2_title:'Flip Clock Interface', feat2_desc:'A real-time precision display with a signature flip-digit animation. The holographic clock-in button makes the primary action impossible to miss.',
+    feat3_title:'Role-Based Access', feat3_desc:'Three distinct tiers — Admin, Manager, and Employee — each with tailored screens and permissions. Managers see only their direct reports.',
+    feat4_title:'Request Workflow', feat4_desc:'Remote work, sick leave, day off, and overtime requests — each with full manager approval, rejection with notes, and automatic conflict resolution.',
+    feat5_title:'Overtime Detection', feat5_desc:'Automatic overtime detection on clock-out. When worked hours exceed the planned schedule, the employee is immediately prompted to add a note.',
+    feat6_title:'Team Hours Dashboard', feat6_desc:'Managers view the past 30 days of clock data for every direct report. Full CRUD on clock events and remote hours — corrections take seconds.',
+    show_eyebrow:'Manager View', show_title:'Your team.<br/>At a glance.',
+    show_f1_title:'30-Day History', show_f1_desc:'Every clock event for every direct report — past 30 days, filterable by employee, with inline edit and delete.',
+    show_f2_title:'Full CRUD', show_f2_desc:'Add missed clock events, correct wrong timestamps, and log remote work hours — all from the Team Hours screen.',
+    show_f3_title:'Instant Notifications', show_f3_desc:'Push notifications fire the moment an employee submits a request — and employees are notified instantly on approval or rejection.',
+    plat_eyebrow:'Native Platforms', plat_title:'Built native.<br/>Not just ported.',
+    plat_subtitle:'Two separate codebases, each crafted for its platform — not a cross-platform compromise.',
+    ios_f1:'<code style="font-family:var(--mono);font-size:12px;color:var(--orange)">@Observable</code> macro — SwiftUI 6 state management',
+    ios_f2:'Adaptive dark/light mode — tracks system theme automatically',
+    ios_f3:'Firebase Auth, Firestore, Cloud Messaging (FCM)',
+    ios_f4:'Network-based WiFi SSID detection + CoreLocation GPS',
+    ios_f5:'Portrait-only, optimized for one-handed use',
+    and_f1:'<code style="font-family:var(--mono);font-size:12px;color:var(--green)">StateFlow</code> + Compose state — reactive without ViewModel complexity',
+    and_f2:'Adaptive dark/light mode via <code style="font-family:var(--mono);font-size:12px;color:var(--green)">isSystemInDarkTheme()</code>',
+    and_f3:'Fused Location Provider polling every 10s with Accompanist permissions',
+    and_f4:'FCM V1 API — push notifications on real devices and emulators',
+    and_f5:'WifiManager SSID detection with ACCESS_WIFI_STATE permission',
+    roles_eyebrow:'Access Control', roles_title:'Three tiers.<br/>Perfectly separated.',
+    role1_badge:'Employee', role1_title:'The Daily User', role1_desc:'Everything an employee needs to stay compliant and informed — no more, no less.',
+    role1_p1:'Clock in/out with location verification', role1_p2:'View personal hours and history',
+    role1_p3:'Submit leave, remote work, and overtime requests',
+    role1_p4:'Select active ClickUp tasks at clock-in', role1_p5:'Receive push notifications on request updates',
+    role2_badge:'Manager', role2_title:'The Team Lead', role2_desc:'Full visibility and control over direct reports — approve, reject, correct, and review.',
+    role2_p1:'All Employee capabilities', role2_p2:'View and edit team clock events',
+    role2_p3:'Approve or reject requests with notes', role2_p4:'Log remote hours for team members',
+    role2_p5:'Receive push notifications on new requests',
+    role3_badge:'Admin', role3_title:'The Operator', role3_desc:'Complete workspace control via the web admin panel — users, offices, events, and configuration.',
+    role3_p1:'All Manager capabilities', role3_p2:'Manage users and schedules',
+    role3_p3:'Configure office GPS + WiFi zones', role3_p4:'Full CRUD on all clock events',
+    role3_p5:'Workspace settings and integrations',
+    int_eyebrow:'Integrations', int_title:'Connected to the<br/>tools you already use.',
+    int1_desc:'Auth, Firestore, and Cloud Messaging power the entire backend — real-time, scalable, zero maintenance.',
+    int2_desc:'Employees select active tasks at clock-in. Task time is linked to clock events for billable hour accuracy.',
+    int3_desc:'Webhook configuration ready — automatic channel notifications on clock events (coming soon).',
+    int4_desc:'Bot webhook config stored per workspace — team activity posted to <code style="font-size:11px;font-family:var(--mono)">#metroclock</code> channel (coming soon).',
+    cta_eyebrow:'Get Started', cta_title:'Ready to bring<br/><em style="color:var(--orange);font-style:normal;">precision</em> to your team?',
+    cta_subtitle:'MetroClock is available for enterprise deployment on iOS and Android. Reach out to discuss your team\'s requirements.',
+    cta_guide:'View User Guide',
+    footer_guide:'User Guide', footer_admin:'Admin Panel', footer_contact:'Contact', footer_copy:'All rights reserved.',
+    clock_days:['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
+    clock_months:['January','February','March','April','May','June','July','August','September','October','November','December'],
+  }
+};
+
+let currentLang = 'sr';
+
+function applyLang(l) {
+  currentLang = l;
+  const t = T[l];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.dataset.i18n;
+    if (t[k] !== undefined) el.textContent = t[k];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const k = el.dataset.i18nHtml;
+    if (t[k] !== undefined) el.innerHTML = t[k];
+  });
+  const btn = document.getElementById('lang-toggle');
+  if (btn) btn.textContent = l === 'sr' ? 'EN' : 'SR';
+  document.documentElement.lang = l;
+}
+
+function toggleLang() {
+  applyLang(currentLang === 'sr' ? 'en' : 'sr');
+}
+
+applyLang('sr');
+
+/* ── Live Clock ── */
+function updateClock() {
+  const now = new Date();
+  let h = now.getHours(), m = now.getMinutes();
+  const h1 = Math.floor(h / 10), h2 = h % 10;
+  const m1 = Math.floor(m / 10), m2 = m % 10;
+  const digits = [
+    { el: document.getElementById('d1'), val: String(h1) },
+    { el: document.getElementById('d2'), val: String(h2) },
+    { el: document.getElementById('d3'), val: String(m1) },
+    { el: document.getElementById('d4'), val: String(m2) },
+  ];
+  digits.forEach(d => {
+    if (d.el && d.el.textContent !== d.val) {
+      d.el.classList.remove('flip-anim');
+      void d.el.offsetWidth;
+      d.el.classList.add('flip-anim');
+      d.el.textContent = d.val;
+    }
+  });
+  const langData = typeof T !== 'undefined' ? (T[currentLang] || T.sr) : null;
+  const days   = langData ? langData.clock_days : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = langData ? langData.clock_months : ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const lbl    = document.getElementById('sc-date-lbl');
+  if (lbl) lbl.textContent = `${days[now.getDay()].toUpperCase()}, ${now.getDate()} ${months[now.getMonth()].toUpperCase()}`;
+}
+updateClock();
+setInterval(updateClock, 1000);
+
+/* ── Phone 3D tilt on mouse ── */
+const phoneGroup = document.getElementById('phoneGroup');
+const phoneCenterWrap  = phoneGroup?.querySelector('.phone-wrap.center');
+const phoneLeftWrap    = phoneGroup?.querySelector('.phone-wrap.left');
+const phoneRightWrap   = phoneGroup?.querySelector('.phone-wrap.right');
+
+document.addEventListener('mousemove', (e) => {
+  if (!phoneGroup) return;
+  const rect   = phoneGroup.getBoundingClientRect();
+  const cx     = rect.left + rect.width / 2;
+  const cy     = rect.top  + rect.height / 2;
+  const dx     = (e.clientX - cx) / rect.width;
+  const dy     = (e.clientY - cy) / rect.height;
+  const ry     = dx * 10, rx = -dy * 6;
+
+  if (phoneCenterWrap) phoneCenterWrap.style.transform = `rotateY(${ry}deg) rotateX(${rx}deg) scale(1)`;
+  if (phoneLeftWrap)   phoneLeftWrap.style.transform   = `translateX(-160px) rotateY(${28 + ry * 0.5}deg) rotateX(${rx * 0.5}deg) scale(0.82)`;
+  if (phoneRightWrap)  phoneRightWrap.style.transform  = `translateX(160px) rotateY(${-28 + ry * 0.5}deg) rotateX(${rx * 0.5}deg) scale(0.82)`;
+});
+
+document.addEventListener('mouseleave', () => {
+  if (phoneCenterWrap) phoneCenterWrap.style.transform = '';
+  if (phoneLeftWrap)   phoneLeftWrap.style.transform   = '';
+  if (phoneRightWrap)  phoneRightWrap.style.transform  = '';
+});
+
+/* ── Showcase phone parallax ── */
+const showcasePhone = document.getElementById('showcasePhone');
+window.addEventListener('scroll', () => {
+  if (!showcasePhone) return;
+  const rect = showcasePhone.getBoundingClientRect();
+  const viewH = window.innerHeight;
+  const progress = 1 - (rect.top + rect.height / 2) / viewH;
+  const ry = -12 + progress * 4;
+  showcasePhone.style.transform = `rotateY(${ry}deg) rotateX(4deg)`;
+});
+
+/* ── Scroll Reveal (IntersectionObserver) ── */
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      // Trigger count-up for stats
+      entry.target.querySelectorAll('.count-up').forEach(el => countUp(el));
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .stagger').forEach(el => observer.observe(el));
+
+/* ── Count-up animation ── */
+function countUp(el) {
+  const target = parseFloat(el.dataset.target);
+  const dec    = target % 1 !== 0 ? 1 : 0;
+  const dur    = 1600;
+  const start  = performance.now();
+  function tick(now) {
+    const t = Math.min((now - start) / dur, 1);
+    const ease = 1 - Math.pow(1 - t, 3);
+    el.textContent = (target * ease).toFixed(dec);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = target.toFixed(dec);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ── Stagger delays: add CSS var to each child ── */
+document.querySelectorAll('.stagger').forEach(wrapper => {
+  Array.from(wrapper.children).forEach((child, i) => {
+    child.style.transitionDelay = `${i * 0.1}s`;
+  });
+});
+
+
+</script>
+</body>
+</html>

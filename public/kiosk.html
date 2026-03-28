@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MetroClock · Kiosk</title>
+<link rel="icon" href="icon.png"/>
+<link rel="manifest" href="/manifest.json"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="MetroClock"/>
+<link rel="apple-touch-icon" href="/icon-192.png"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#141417; --s1:#19191E; --s2:#1D1D23;
+  --b1:#23232A; --b2:#2B2B35;
+  --orange:#EA4500; --og-d:rgba(234,69,0,.1); --og-g:rgba(234,69,0,.3);
+  --green:#2DD47E;  --gn-d:rgba(45,212,126,.1); --gn-g:rgba(45,212,126,.28);
+  --red:#F55252;
+  --t1:#FFFFFF; --t2:#888899; --t3:#555566; --t4:#2E2E3E;
+}
+html,body{
+  width:100%;height:100%;background:var(--bg);
+  font-family:'DM Sans',sans-serif;color:var(--t1);
+  overflow:hidden;user-select:none;-webkit-tap-highlight-color:transparent;
+  touch-action:manipulation;
+}
+
+/* ── background orbs ── */
+.orb{position:fixed;border-radius:50%;filter:blur(130px);pointer-events:none;z-index:0;}
+.o1{width:700px;height:700px;background:var(--orange);top:-300px;right:-200px;opacity:.07;animation:d1 22s ease-in-out infinite;}
+.o2{width:500px;height:500px;background:#1A10FF;bottom:-200px;left:-150px;opacity:.06;animation:d2 28s ease-in-out infinite;}
+@keyframes d1{0%,100%{transform:translate(0,0)}50%{transform:translate(-50px,50px)}}
+@keyframes d2{0%,100%{transform:translate(0,0)}50%{transform:translate(50px,-40px)}}
+
+/* scanlines */
+.scan{position:fixed;inset:0;z-index:1;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.012) 2px,rgba(0,0,0,.012) 4px);}
+
+/* ── shell ── */
+.shell{position:relative;z-index:2;width:100vw;height:100vh;display:flex;flex-direction:column;}
+
+/* ── header ── */
+header{
+  flex-shrink:0;height:72px;padding:0 32px;
+  display:flex;align-items:center;gap:16px;
+  border-bottom:1px solid var(--b1);
+  background:rgba(7,7,10,.9);backdrop-filter:blur(20px);
+}
+.hlogo{width:36px;height:36px;border-radius:10px;background:var(--orange);
+  display:flex;align-items:center;justify-content:center;}
+.hlogo svg{width:20px;height:20px;}
+.htitle{font-size:17px;font-weight:700;letter-spacing:-.3px;}
+.hsub{font-size:12px;color:var(--t3);margin-top:1px;}
+.hclock{margin-left:auto;text-align:right;}
+.htime{font-family:'DM Mono',monospace;font-size:28px;font-weight:500;letter-spacing:-1px;}
+.hdate{font-size:10px;color:var(--t3);letter-spacing:2px;text-transform:uppercase;margin-top:2px;}
+.hdot{width:8px;height:8px;border-radius:50%;background:var(--green);
+  box-shadow:0 0 10px var(--gn-g);animation:pulse 2s ease-in-out infinite;margin-right:4px;display:inline-block;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.75)}}
+
+/* ── main ── */
+.main{flex:1;display:flex;align-items:center;justify-content:center;padding:24px 32px;min-height:0;overflow:hidden;}
+
+/* ── employee grid ── */
+.egrid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+  gap:14px;
+  width:100%;max-width:1100px;
+  max-height:100%;
+  overflow-y:auto;
+  padding:4px;
+}
+.egrid::-webkit-scrollbar{width:4px;}
+.egrid::-webkit-scrollbar-track{background:transparent;}
+.egrid::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px;}
+
+/* ── employee card ── */
+.ecard{
+  background:var(--s1);border:1px solid var(--b1);border-radius:20px;
+  padding:20px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;
+  cursor:pointer;transition:all .2s;position:relative;overflow:hidden;
+}
+.ecard::before{content:'';position:absolute;inset:0;border-radius:20px;opacity:0;transition:opacity .3s;pointer-events:none;}
+.ecard:active{transform:scale(.96);}
+.ecard.in{border-color:rgba(45,212,126,.22);}
+.ecard.in::before{background:radial-gradient(ellipse at 50% 0%,rgba(45,212,126,.09),transparent 65%);opacity:1;}
+.ecard.rem{border-color:rgba(234,69,0,.2);}
+.ecard.rem::before{background:radial-gradient(ellipse at 50% 0%,rgba(234,69,0,.09),transparent 65%);opacity:1;}
+.ecard.out{opacity:.55;}
+.ecard:hover:not(.out){border-color:var(--b2);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.4);}
+
+.eavatar{
+  width:56px;height:56px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;font-weight:700;
+  border:2px solid transparent;position:relative;
+}
+.ecard.in  .eavatar{background:var(--gn-d);border-color:var(--green);color:var(--green);}
+.ecard.rem .eavatar{background:var(--og-d);border-color:var(--orange);color:var(--orange);}
+.ecard.out .eavatar{background:var(--s2);border-color:var(--b2);color:var(--t3);}
+.aglow{position:absolute;inset:-6px;border-radius:50%;pointer-events:none;animation:gpulse 3s ease-in-out infinite;}
+.ecard.in  .aglow{background:radial-gradient(circle,var(--gn-g) 0%,transparent 70%);}
+.ecard.rem .aglow{background:radial-gradient(circle,var(--og-g) 0%,transparent 70%);}
+.ecard.out .aglow{display:none;}
+@keyframes gpulse{0%,100%{opacity:.5}50%{opacity:1}}
+
+.ename{font-size:13px;font-weight:600;text-align:center;line-height:1.3;}
+.estatus{
+  font-size:10px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;
+  padding:3px 10px;border-radius:20px;
+}
+.ecard.in  .estatus{background:var(--gn-d);color:var(--green);}
+.ecard.rem .estatus{background:var(--og-d);color:var(--orange);}
+.ecard.out .estatus{background:var(--s2);color:var(--t3);}
+.etime{font-family:'DM Mono',monospace;font-size:12px;color:var(--t2);}
+
+/* ── overlay ── */
+.overlay{
+  position:fixed;inset:0;z-index:100;
+  background:rgba(7,7,10,.92);backdrop-filter:blur(32px);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+.overlay.show{opacity:1;pointer-events:all;}
+
+/* ── PIN modal ── */
+.modal{
+  background:var(--s1);border:1px solid var(--b2);border-radius:28px;
+  padding:36px 32px 28px;width:340px;display:flex;flex-direction:column;align-items:center;gap:0;
+  animation:mup .25s ease;
+}
+@keyframes mup{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+.mavatar{
+  width:64px;height:64px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:22px;font-weight:700;margin-bottom:14px;
+}
+.mavatar.in{background:var(--gn-d);border:2px solid var(--green);color:var(--green);}
+.mavatar.out{background:var(--og-d);border:2px solid var(--orange);color:var(--orange);}
+
+.mname{font-size:20px;font-weight:700;margin-bottom:4px;}
+.maction{font-size:13px;color:var(--t2);margin-bottom:28px;}
+.maction span{color:var(--orange);font-weight:600;}
+.maction span.gin{color:var(--green);}
+
+/* PIN dots */
+.pdots{display:flex;gap:14px;margin-bottom:28px;}
+.pdot{
+  width:16px;height:16px;border-radius:50%;
+  background:var(--b2);border:2px solid var(--b2);
+  transition:all .15s;
+}
+.pdot.filled{background:var(--orange);border-color:var(--orange);transform:scale(1.1);}
+.pdot.filled.gin{background:var(--green);border-color:var(--green);}
+
+/* PIN pad */
+.ppad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;width:100%;}
+.pkey{
+  background:var(--s2);border:1px solid var(--b2);border-radius:16px;
+  height:60px;font-size:22px;font-weight:600;color:var(--t1);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .12s;
+}
+.pkey:active,.pkey.pressed{background:var(--b2);transform:scale(.93);}
+.pkey.del{font-size:18px;color:var(--t2);}
+.pkey.empty{background:transparent;border-color:transparent;pointer-events:none;}
+
+/* error shake */
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.pdots.shake{animation:shake .4s ease;}
+
+/* success */
+.msuccess{
+  display:flex;flex-direction:column;align-items:center;gap:12px;padding:8px 0;
+}
+.mcheck{width:64px;height:64px;border-radius:50%;display:flex;align-items:center;justify-content:center;animation:popin .3s ease;}
+.mcheck.in{background:var(--gn-d);border:2px solid var(--green);}
+.mcheck.out{background:rgba(245,82,82,.1);border:2px solid var(--red);}
+@keyframes popin{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
+.mcheck svg{width:28px;height:28px;}
+.msucc-txt{font-size:18px;font-weight:700;}
+.msucc-sub{font-size:13px;color:var(--t2);}
+
+/* cancel btn */
+.mcancel{
+  margin-top:18px;font-size:13px;color:var(--t3);
+  background:none;border:none;cursor:pointer;padding:8px 20px;
+  transition:color .2s;
+}
+.mcancel:hover{color:var(--t2);}
+
+/* ── loading/error ── */
+.loading{
+  position:fixed;inset:0;z-index:200;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;flex-direction:column;gap:20px;
+}
+.lspinner{width:36px;height:36px;border:3px solid var(--b2);border-top-color:var(--orange);
+  border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.lerr{text-align:center;padding:32px;}
+.lerr h2{font-size:20px;margin-bottom:8px;}
+.lerr p{font-size:13px;color:var(--t3);}
+
+/* ── Login screen ── */
+.login-screen{
+  position:fixed;inset:0;z-index:300;background:var(--bg);
+  display:none;align-items:center;justify-content:center;flex-direction:column;gap:0;
+}
+.login-box{
+  background:var(--s1);border:1px solid var(--b2);border-radius:24px;
+  padding:40px 36px 32px;width:340px;display:flex;flex-direction:column;align-items:center;
+}
+.login-logo{width:52px;height:52px;border-radius:14px;overflow:hidden;margin-bottom:18px;}
+.login-logo img{width:100%;height:100%;display:block;}
+.login-title{font-size:20px;font-weight:700;margin-bottom:4px;}
+.login-sub{font-size:13px;color:var(--t3);margin-bottom:28px;}
+.login-field{width:100%;margin-bottom:14px;}
+.login-field input{
+  width:100%;background:var(--s2);border:1px solid var(--b2);border-radius:12px;
+  padding:13px 16px;font-size:15px;color:var(--t1);font-family:inherit;
+  box-sizing:border-box;outline:none;transition:border-color .2s;
+}
+.login-field input:focus{border-color:rgba(234,69,0,.5);}
+.login-field input::placeholder{color:var(--t3);}
+.login-btn{
+  width:100%;background:var(--orange);color:#fff;border:none;border-radius:12px;
+  padding:14px;font-size:15px;font-weight:700;font-family:inherit;
+  cursor:pointer;margin-top:6px;transition:opacity .2s;
+}
+.login-btn:hover{opacity:.85;}
+.login-btn:disabled{opacity:.5;cursor:not-allowed;}
+.login-err{font-size:12px;color:#F55252;margin-top:10px;text-align:center;min-height:18px;}
+
+/* ── no PIN warning ── */
+.nopinwrap{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;}
+.nopin-icon{font-size:36px;margin-bottom:4px;}
+.nopin-txt{font-size:15px;font-weight:600;color:var(--t1);}
+.nopin-sub{font-size:12px;color:var(--t3);text-align:center;line-height:1.5;}
+
+/* ── Kiosk control buttons ── */
+.kbtn{position:fixed;z-index:60;background:rgba(13,13,19,.85);border:1px solid var(--b2);
+  border-radius:12px;width:42px;height:42px;display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:all .2s;backdrop-filter:blur(8px);}
+.kbtn:hover{background:var(--b2);}
+.kbtn-fs{bottom:16px;right:16px;}
+
+/* ── Update banner ── */
+.upd-banner{position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
+  background:var(--s2);border:1px solid rgba(45,212,126,.35);border-radius:12px;
+  padding:12px 24px;font-size:13px;color:var(--t1);z-index:500;
+  display:none;align-items:center;gap:10px;
+  box-shadow:0 0 24px rgba(45,212,126,.12);}
+.upd-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;
+  animation:pdot 1s ease-in-out infinite;}
+</style>
+</head>
+<body>
+<div class="orb o1"></div>
+<div class="orb o2"></div>
+<div class="scan"></div>
+
+<div id="loading" class="loading">
+  <div class="lspinner"></div>
+  <div style="font-size:13px;color:var(--t3);">Učitavanje...</div>
+</div>
+
+<!-- Login screen -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo"><img src="/icon.png" alt="MetroClock"/></div>
+    <div class="login-title">MetroClock Kiosk</div>
+    <div class="login-sub">Prijavite se da biste nastavili</div>
+    <div class="login-field"><input type="email" id="loginEmail" placeholder="Email adresa" autocomplete="off" autocapitalize="none"/></div>
+    <div class="login-field"><input type="password" id="loginPassword" placeholder="Lozinka"/></div>
+    <button class="login-btn" id="loginBtn" onclick="doLogin()">Prijavi se</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<div class="shell" id="shell" style="display:none;">
+  <header>
+    <div class="hlogo">
+      <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="10" cy="10" r="8" stroke="white" stroke-width="1.8"/>
+        <path d="M10 6v4l2.5 2.5" stroke="white" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="htitle">MetroClock</div>
+      <div class="hsub" id="wsName">Kiosk</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-left:20px;">
+      <div class="hdot"></div>
+      <span style="font-size:12px;color:var(--t2);">Tapnite vaše ime za Clock In / Out</span>
+    </div>
+    <div class="hclock">
+      <div class="htime" id="htime">--:--:--</div>
+      <div class="hdate" id="hdate"></div>
+    </div>
+  </header>
+
+  <div class="main">
+    <div class="egrid" id="egrid"></div>
+  </div>
+</div>
+
+<!-- PIN overlay -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- Update banner -->
+<div class="upd-banner" id="updBanner">
+  <div class="upd-dot"></div>
+  <span>Ažuriranje dostupno — reloadujem za <span id="updCountdown">5</span>s</span>
+</div>
+
+<!-- Fullscreen button -->
+<button class="kbtn kbtn-fs" id="kbtnFs" onclick="toggleFS()" title="Fullscreen">
+  <svg id="fsIcon" width="16" height="16" viewBox="0 0 16 16" fill="none">
+    <path d="M1 6V1h5M10 1h5v5M15 10v5h-5M6 15H1v-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</button>
+
+
+<script>
+// ── Firebase ──────────────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyAZjk5uyZciClsji9GCSA1Ov4rZ_XuOe2M",
+  authDomain: "metroclockbyecho.firebaseapp.com",
+  projectId: "metroclockbyecho",
+  storageBucket: "metroclockbyecho.firebasestorage.app",
+  messagingSenderId: "379668362923",
+  appId: "1:379668362923:web:33d12fe3b2346c50f269ee"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ── State ─────────────────────────────────────────────────────────────────────
+const wsId = new URLSearchParams(location.search).get('workspace');
+let users       = [];
+let clockStatus = {};   // userId → 'in'|'out'
+let workedSec   = {};   // userId → seconds worked today
+let remoteUsers = new Set();
+let wsName      = '';
+
+// PIN modal state
+let selectedUser = null;
+let pinBuffer    = '';
+let pinAction    = null; // 'in'|'out'
+
+
+// Idle reset timer
+let idleTimer = null;
+const IDLE_MS = 12000;
+
+// ── Clock ─────────────────────────────────────────────────────────────────────
+function tickClock() {
+  const now = new Date();
+  document.getElementById('htime').textContent =
+    now.toLocaleTimeString('sr-RS', {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  document.getElementById('hdate').textContent =
+    now.toLocaleDateString('sr-RS', {weekday:'long',day:'numeric',month:'long'}).toUpperCase();
+}
+setInterval(tickClock, 1000);
+tickClock();
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function initials(u) {
+  return ((u.firstName||'?')[0] + (u.lastName||'?')[0]).toUpperCase();
+}
+function statusClass(uid) {
+  if (clockStatus[uid] === 'in') return 'in';
+  if (remoteUsers.has(uid)) return 'rem';
+  return 'out';
+}
+function statusLabel(uid) {
+  if (clockStatus[uid] === 'in') return 'Na poslu';
+  if (remoteUsers.has(uid)) return 'Remote';
+  return 'Odsutan';
+}
+function fmtTime(sec) {
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+// ── Render grid ───────────────────────────────────────────────────────────────
+function renderGrid() {
+  const grid = document.getElementById('egrid');
+  // Sort: in first, remote second, out last
+  const sorted = [...users].filter(u => u.isActive !== false && u.role !== 'superadmin' && u.role !== 'admin').sort((a, b) => {
+    const order = { in: 0, rem: 1, out: 2 };
+    return (order[statusClass(a.id)] || 2) - (order[statusClass(b.id)] || 2);
+  });
+
+  grid.innerHTML = sorted.map(u => {
+    const sc = statusClass(u.id);
+    const ws = workedSec[u.id] || 0;
+    return `
+      <div class="ecard ${sc}" onclick="openPIN('${u.id}')">
+        <div class="awrap" style="position:relative">
+          <div class="eavatar">
+            ${sc !== 'out' ? '<div class="aglow"></div>' : ''}
+            ${initials(u)}
+          </div>
+        </div>
+        <div class="ename">${u.firstName} ${u.lastName}</div>
+        <div class="estatus">${statusLabel(u.id)}</div>
+        ${ws > 0 ? `<div class="etime">${fmtTime(ws)}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+// ── Open PIN modal ─────────────────────────────────────────────────────────────
+function openPIN(userId) {
+  selectedUser = users.find(u => u.id === userId);
+  if (!selectedUser) return;
+
+  pinBuffer = '';
+  pinAction = clockStatus[userId] === 'in' ? 'out' : 'in';
+
+  const modal = document.getElementById('modal');
+  const sc = statusClass(userId);
+  const actionLabel = pinAction === 'in'
+    ? `<span class="gin">Clock In</span>`
+    : `<span>Clock Out</span>`;
+
+  if (!selectedUser.kioskPin) {
+    // No PIN set — show info message
+    modal.innerHTML = `
+      <div class="nopinwrap">
+        <div class="nopin-icon">🔐</div>
+        <div class="nopin-txt">${selectedUser.firstName} ${selectedUser.lastName}</div>
+        <div class="nopin-sub">PIN kod nije postavljen.<br>Kontaktirajte administratora.</div>
+      </div>
+      <button class="mcancel" onclick="closePIN()">Zatvori</button>`;
+  } else {
+    modal.innerHTML = `
+      <div class="mavatar ${pinAction === 'out' ? 'in' : 'out'}">${initials(selectedUser)}</div>
+      <div class="mname">${selectedUser.firstName} ${selectedUser.lastName}</div>
+      <div class="maction">Unesite PIN za ${actionLabel}</div>
+      <div class="pdots" id="pdots">
+        <div class="pdot" id="d0"></div>
+        <div class="pdot" id="d1"></div>
+        <div class="pdot" id="d2"></div>
+        <div class="pdot" id="d3"></div>
+      </div>
+      <div class="ppad">
+        ${[1,2,3,4,5,6,7,8,9].map(n=>`<div class="pkey" onclick="pinPress('${n}')">${n}</div>`).join('')}
+        <div class="pkey empty"></div>
+        <div class="pkey" onclick="pinPress('0')">0</div>
+        <div class="pkey del" onclick="pinDel()">⌫</div>
+      </div>
+      <button class="mcancel" onclick="closePIN()">Otkaži</button>`;
+  }
+
+  document.getElementById('overlay').classList.add('show');
+  resetIdle();
+}
+
+// ── PIN input ─────────────────────────────────────────────────────────────────
+function pinPress(digit) {
+  if (pinBuffer.length >= 4) return;
+  pinBuffer += digit;
+  updateDots();
+  resetIdle();
+  if (pinBuffer.length === 4) {
+    setTimeout(checkPIN, 120);
+  }
+}
+function pinDel() {
+  pinBuffer = pinBuffer.slice(0, -1);
+  updateDots();
+  resetIdle();
+}
+function updateDots() {
+  const sc = pinAction === 'in' ? 'gin' : '';
+  for (let i = 0; i < 4; i++) {
+    const dot = document.getElementById('d'+i);
+    if (!dot) return;
+    dot.className = 'pdot' + (i < pinBuffer.length ? ` filled ${sc}` : '');
+  }
+}
+function checkPIN() {
+  if (pinBuffer === String(selectedUser.kioskPin)) {
+    doClockAction();
+  } else {
+    // Wrong PIN — shake + clear
+    const dots = document.getElementById('pdots');
+    if (dots) {
+      dots.classList.add('shake');
+      setTimeout(() => { dots.classList.remove('shake'); }, 400);
+    }
+    pinBuffer = '';
+    updateDots();
+    resetIdle();
+  }
+}
+
+// ── Clock action ──────────────────────────────────────────────────────────────
+async function doClockAction() {
+  const userId = selectedUser.id;
+  const isClockIn = pinAction === 'in';
+
+  showSuccess(isClockIn);
+
+  try {
+    await db.collection('clockEvents').add({
+      userId,
+      workspaceId: wsId,
+      type: isClockIn ? 'clockIn' : 'clockOut',
+      timestamp: firebase.firestore.Timestamp.now(),
+      locationId: 'kiosk',
+      source: 'kiosk'
+    });
+    // Update local state optimistically
+    clockStatus[userId] = isClockIn ? 'in' : 'out';
+    renderGrid();
+  } catch (e) {
+    console.error('Clock error:', e);
+  }
+
+  setTimeout(() => closePIN(), 2200);
+}
+
+function showSuccess(isClockIn) {
+  const modal = document.getElementById('modal');
+  const color = isClockIn ? 'in' : 'out';
+  const iconPath = isClockIn
+    ? '<path d="M5 10l4 4 6-7" stroke="#2DD47E" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>'
+    : '<path d="M6 6l8 8M14 6l-8 8" stroke="#F55252" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>';
+
+  modal.innerHTML = `
+    <div class="msuccess">
+      <div class="mcheck ${color}">
+        <svg viewBox="0 0 20 20" fill="none">${iconPath}</svg>
+      </div>
+      <div class="msucc-txt">${isClockIn ? 'Clock In uspešan' : 'Clock Out uspešan'}</div>
+      <div class="msucc-sub">${selectedUser.firstName} ${selectedUser.lastName}</div>
+    </div>`;
+}
+
+// ── Close / idle ──────────────────────────────────────────────────────────────
+function closePIN() {
+  document.getElementById('overlay').classList.remove('show');
+  selectedUser = null;
+  pinBuffer = '';
+  clearTimeout(idleTimer);
+}
+function resetIdle() {
+  clearTimeout(idleTimer);
+  idleTimer = setTimeout(() => closePIN(), IDLE_MS);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  if (!wsId) {
+    showErr('URL ne sadrži workspace parametar', 'Primjer: kiosk.html?workspace=WORKSPACE_ID');
+    return;
+  }
+
+  try {
+    // Workspace
+    const wsDoc = await db.collection('workspaces').doc(wsId).get();
+    if (!wsDoc.exists) { showErr('Workspace nije pronađen', `ID: ${wsId}`); return; }
+    wsName = wsDoc.data().name || wsId;
+    document.getElementById('wsName').textContent = wsName;
+
+    // Users
+    const usersSnap = await db.collection('users').where('workspaceId','==',wsId).get();
+    users = usersSnap.docs.map(d => ({id: d.id, ...d.data()}));
+
+    // Today's clock events
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0);
+    const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    const fs_start = firebase.firestore.Timestamp.fromDate(start);
+    const fs_end   = firebase.firestore.Timestamp.fromDate(end);
+
+    // Live listener for clock events
+    db.collection('clockEvents')
+      .where('workspaceId','==',wsId)
+      .where('timestamp','>=',fs_start)
+      .where('timestamp','<=',fs_end)
+      .onSnapshot(snap => {
+        clockStatus = {};
+        workedSec = {};
+        const evsByUser = {};
+        snap.docs.forEach(d => {
+          const ev = d.data();
+          if (!evsByUser[ev.userId]) evsByUser[ev.userId] = [];
+          evsByUser[ev.userId].push({ type: ev.type, ts: ev.timestamp?.toDate() });
+        });
+        Object.entries(evsByUser).forEach(([uid, evs]) => {
+          evs.sort((a,b) => a.ts - b.ts);
+          let last = evs[evs.length-1];
+          clockStatus[uid] = last.type === 'clockIn' ? 'in' : 'out';
+          // Calculate worked seconds
+          let total = 0, lastIn = null;
+          evs.forEach(ev => {
+            if (ev.type === 'clockIn') lastIn = ev.ts;
+            else if (ev.type === 'clockOut' && lastIn) {
+              total += (ev.ts - lastIn) / 1000;
+              lastIn = null;
+            }
+          });
+          if (lastIn) total += (Date.now() - lastIn) / 1000;
+          workedSec[uid] = Math.floor(total);
+        });
+        renderGrid();
+      });
+
+    // Remote work today
+    db.collection('requests')
+      .where('workspaceId','==',wsId)
+      .where('status','==','approved')
+      .where('type','==','remoteWork')
+      .onSnapshot(snap => {
+        remoteUsers.clear();
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        snap.docs.forEach(d => {
+          const r = d.data();
+          const from = r.dateFrom?.toDate() || r.date?.toDate();
+          const to   = r.dateTo?.toDate() || from;
+          if (from && to) {
+            const f = new Date(from); f.setHours(0,0,0,0);
+            const t = new Date(to);   t.setHours(0,0,0,0);
+            if (today >= f && today <= t) remoteUsers.add(r.userId);
+          }
+        });
+        renderGrid();
+      });
+
+    // Refresh worked time every minute
+    setInterval(renderGrid, 60000);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('shell').style.display = 'flex';
+
+  } catch(e) {
+    showErr('Greška pri učitavanju', e.message);
+  }
+}
+
+function showErr(title, msg) {
+  document.getElementById('loading').innerHTML = `
+    <div class="lerr">
+      <h2>${title}</h2><p>${msg || ''}</p>
+    </div>`;
+}
+
+// ── Auth → init ───────────────────────────────────────────────────────────────
+firebase.auth().onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('loginScreen').style.display = 'none';
+    init();
+  } else {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('loginScreen').style.display = 'flex';
+  }
+});
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPassword').value;
+  const btn   = document.getElementById('loginBtn');
+  const err   = document.getElementById('loginErr');
+  if (!email || !pass) { err.textContent = 'Unesite email i lozinku.'; return; }
+  btn.disabled = true;
+  btn.textContent = 'Prijava...';
+  err.textContent = '';
+  try {
+    await firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    await firebase.auth().signInWithEmailAndPassword(email, pass);
+    // onAuthStateChanged će pozvati init()
+  } catch (e) {
+    err.textContent = e.code === 'auth/wrong-password' || e.code === 'auth/user-not-found'
+      ? 'Pogrešan email ili lozinka.'
+      : 'Greška: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Prijavi se';
+  }
+}
+
+// ── Fullscreen ────────────────────────────────────────────────────────────────
+function toggleFS() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen().catch(() => {});
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const isFS = !!document.fullscreenElement;
+  const icon = document.getElementById('fsIcon');
+  if (icon) {
+    icon.innerHTML = isFS
+      ? '<path d="M6 1H1v5M15 6V1h-5M10 15h5v-5M1 10v5h5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>'
+      : '<path d="M1 6V1h5M10 1h5v5M15 10v5h-5M6 15H1v-5" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>';
+  }
+});
+
+// ── Auto-reload jednom dnevno u 04:00 ────────────────────────────────────────
+function scheduleDaily() {
+  const now  = new Date();
+  const next = new Date();
+  next.setHours(4, 0, 0, 0);
+  if (next <= now) next.setDate(next.getDate() + 1); // ako je već prošlo 4:00 danas
+  const msUntil = next - now;
+  setTimeout(() => {
+    // Prikaži banner i reloaduj
+    showUpdateBanner();
+    setTimeout(() => location.reload(), 5000);
+  }, msUntil);
+}
+
+function showUpdateBanner() {
+  const banner = document.getElementById('updBanner');
+  if (!banner) return;
+  banner.style.display = 'flex';
+  let n = 5;
+  const cd = document.getElementById('updCountdown');
+  const iv = setInterval(() => {
+    n--;
+    if (cd) cd.textContent = n;
+    if (n <= 0) clearInterval(iv);
+  }, 1000);
+}
+
+scheduleDaily();
+</script>
+</body>
+</html>

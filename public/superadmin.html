@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MetroClock · Admin</title>
+<link rel="icon" href="icon.png"/>
+<script>
+  (function(){
+    var ua = navigator.userAgent || navigator.vendor || window.opera;
+    var isMobile = /android|iphone|ipad|ipod|blackberry|iemobile|opera mini|mobile/i.test(ua)
+      || (navigator.maxTouchPoints > 1 && /Macintosh/.test(ua) === false && window.innerWidth < 1024);
+    if (isMobile) {
+      document.addEventListener('DOMContentLoaded', function() {
+        document.body.innerHTML = '<div style="min-height:100vh;background:#07070A;display:flex;align-items:center;justify-content:center;font-family:DM Sans,sans-serif;padding:32px;text-align:center;"><div><div style="font-size:48px;margin-bottom:24px;">💻</div><h1 style="color:#fff;font-size:22px;font-weight:700;margin-bottom:12px;">Desktop only</h1><p style="color:#555566;font-size:14px;line-height:1.6;">Super Admin panel je dostupan samo na laptopu,<br>računaru ili TV ekranu.</p></div></div>';
+      });
+    }
+  })();
+</script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #141417;
+    --surface: #19191E;
+    --surface2: #23232A;
+    --border: rgba(255,255,255,0.06);
+    --border2: rgba(255,255,255,0.1);
+    --text0: #f1f1f3;
+    --text1: #c4c4cc;
+    --text2: #9999a8;
+    --text3: #55555f;
+    --accent: #EA4500;
+    --accent-hover: #C83D00;
+    --green: #2DD47E;
+    --orange: #f59e0b;
+    --red: #F55252;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+    --shadow: 0 4px 16px rgba(0,0,0,0.5);
+    --shadow-lg: 0 20px 60px rgba(0,0,0,0.6);
+    --radius: 14px;
+    --radius-sm: 10px;
+    --font: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 16px; -webkit-font-smoothing: antialiased; }
+  body { background: var(--bg); color: var(--text0); font-family: var(--font); min-height: 100vh; }
+
+  /* TRANSITIONS */
+  .fade-in { animation: fadeIn 0.4s ease both; }
+  .slide-up { animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both; }
+  @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+  @keyframes slideUp { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
+
+  /* LOGIN */
+  #login-screen {
+    position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: var(--bg); z-index: 100;
+  }
+  .login-card {
+    width: 380px; background: var(--surface); border-radius: 24px;
+    padding: 44px 40px; box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border2);
+  }
+  .login-icon {
+    width: 56px; height: 56px; border-radius: 16px;
+    overflow: hidden; margin-bottom: 24px;
+  }
+  .login-icon img { width: 56px; height: 56px; display: block; border-radius: 16px; }
+  .login-title { font-size: 24px; font-weight: 700; letter-spacing: -0.3px; margin-bottom: 4px; }
+  .login-sub { font-size: 14px; color: var(--text2); margin-bottom: 32px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; letter-spacing: 0.01em; }
+  .field input {
+    width: 100%; padding: 12px 14px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text0); font-family: var(--font); font-size: 15px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(234,69,0,0.15); }
+  .btn-primary {
+    width: 100%; padding: 13px; background: var(--accent); color: #fff;
+    border: none; border-radius: var(--radius-sm); font-family: var(--font);
+    font-size: 15px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, transform 0.1s, opacity 0.15s;
+    margin-top: 6px;
+  }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-primary:active { transform: scale(0.99); opacity: 0.9; }
+  .login-error { font-size: 13px; color: var(--red); margin-top: 12px; min-height: 20px; }
+
+  /* TOPBAR */
+  .topbar {
+    position: fixed; top: 0; left: 0; right: 0; height: 52px;
+    background: rgba(7,7,10,0.9); backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid var(--border); z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 10px; }
+  .topbar-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 2px rgba(52,199,89,0.2); }
+  .topbar-title { font-size: 15px; font-weight: 600; letter-spacing: -0.1px; }
+  .topbar-badge {
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 100px;
+    background: rgba(234,69,0,0.1); color: var(--accent); letter-spacing: 0.02em;
+  }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .topbar-user { font-size: 13px; color: var(--text2); }
+  .btn-ghost {
+    padding: 6px 14px; border: 1px solid var(--border2); border-radius: 8px;
+    background: transparent; color: var(--text1); font-family: var(--font);
+    font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s;
+  }
+  .btn-ghost:hover { background: var(--surface2); }
+
+  /* CONTENT */
+  #main-screen { display: none; }
+  .content { padding: 80px 28px 48px; max-width: 1100px; margin: 0 auto; }
+
+  /* PAGE HEADER */
+  .page-header { margin-bottom: 28px; }
+  .page-header h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.4px; }
+  .page-header p { font-size: 14px; color: var(--text2); margin-top: 4px; }
+
+  /* STATS */
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px 24px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+  .stat-label { font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 10px; }
+  .stat-value { font-size: 36px; font-weight: 700; letter-spacing: -1px; line-height: 1; }
+  .stat-value.blue { color: var(--accent); }
+  .stat-value.green { color: var(--green); }
+  .stat-value { font-family: 'DM Mono', monospace; }
+  .stat-sub { font-size: 12px; color: var(--text3); margin-top: 6px; }
+
+  /* TABLE CARD */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden;
+  }
+  .card-header {
+    padding: 18px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-header h2 { font-size: 16px; font-weight: 600; letter-spacing: -0.1px; }
+  .card-header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    padding: 10px 20px; text-align: left; font-size: 11px; font-weight: 600;
+    color: var(--text2); letter-spacing: 0.06em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border); background: var(--surface2);
+  }
+  td { padding: 16px 20px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr { transition: background 0.1s; }
+  tbody tr:hover td { background: var(--surface2); }
+
+  /* PROGRESS */
+  .progress-wrap { min-width: 120px; }
+  .progress-bg { background: var(--border); border-radius: 100px; height: 5px; overflow: hidden; margin-bottom: 5px; }
+  .progress-fill { height: 100%; border-radius: 100px; transition: width 0.6s cubic-bezier(0.16,1,0.3,1); }
+  .progress-text { font-size: 11px; color: var(--text2); font-variant-numeric: tabular-nums; }
+
+  /* BADGES */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 9px; border-radius: 100px; font-size: 11px; font-weight: 600;
+  }
+  .badge-green { background: rgba(52,199,89,0.1); color: var(--green); }
+  .badge-gray { background: var(--surface2); color: var(--text2); border: 1px solid var(--border); }
+  .badge-green::before, .badge-gray::before {
+    content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+  }
+  .badge-green::before { background: var(--green); }
+  .badge-gray::before { background: var(--text3); }
+
+  /* ACTION BUTTONS */
+  .btn-sm {
+    padding: 5px 12px; border-radius: 7px; font-size: 12px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border2); background: var(--surface);
+    color: var(--text1); font-family: var(--font); transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-sm:hover { background: var(--surface2); }
+  .btn-sm.blue { color: var(--accent); border-color: rgba(234,69,0,0.2); background: rgba(234,69,0,0.05); }
+  .btn-sm.blue:hover { background: rgba(234,69,0,0.1); }
+  .btn-sm.red { color: var(--red); border-color: rgba(255,59,48,0.2); background: rgba(255,59,48,0.05); }
+  .btn-sm.red:hover { background: rgba(255,59,48,0.1); }
+  .btn-new {
+    padding: 8px 16px; background: var(--accent); color: #fff; border: none;
+    border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px;
+    font-weight: 600; cursor: pointer; transition: background 0.15s, transform 0.1s;
+  }
+  .btn-new:hover { background: var(--accent-hover); }
+  .btn-new:active { transform: scale(0.98); }
+
+  /* MODAL */
+  .modal-overlay {
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; align-items: flex-end; justify-content: center;
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+  }
+  .modal-overlay.center { align-items: center; }
+  .modal {
+    background: var(--surface); border-radius: 24px 24px 0 0;
+    width: 100%; max-width: 540px; max-height: 92vh; overflow-y: auto;
+    box-shadow: var(--shadow-lg); animation: sheetUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+    border: 1px solid var(--border);
+  }
+  .modal-overlay.center .modal { border-radius: 24px; animation: modalPop 0.3s cubic-bezier(0.16,1,0.3,1) both; }
+  @keyframes sheetUp { from { transform:translateY(100%); opacity:0; } to { transform:translateY(0); opacity:1; } }
+  @keyframes modalPop { from { opacity:0; transform:scale(0.95); } to { opacity:1; transform:scale(1); } }
+  .modal-handle { width: 36px; height: 4px; background: var(--border2); border-radius: 2px; margin: 12px auto 0; }
+  .modal-header { padding: 20px 24px 0; display: flex; align-items: flex-start; justify-content: space-between; }
+  .modal-header-text h2 { font-size: 18px; font-weight: 700; letter-spacing: -0.2px; }
+  .modal-header-text p { font-size: 13px; color: var(--text2); margin-top: 3px; }
+  .modal-close {
+    width: 28px; height: 28px; border-radius: 50%; background: var(--surface2);
+    border: none; color: var(--text2); cursor: pointer; font-size: 14px;
+    display: flex; align-items: center; justify-content: center; transition: background 0.15s;
+  }
+  .modal-close:hover { background: var(--border); }
+  .modal-body { padding: 20px 24px; }
+  .modal-footer { padding: 0 24px 32px; display: flex; flex-direction: column; gap: 10px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text2); margin-bottom: 6px; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 11px 14px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    color: var(--text0); font-family: var(--font); font-size: 14px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .form-group input:focus, .form-group select:focus {
+    border-color: var(--accent); box-shadow: 0 0 0 3px rgba(234,69,0,0.12);
+  }
+  .form-group select option { background: var(--surface); }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
+  .section-label { font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 14px; }
+  .msg { font-size: 13px; min-height: 18px; }
+  .msg-success { color: var(--green); }
+  .msg-error { color: var(--red); }
+  .hidden { display: none !important; }
+
+  /* WS INFO */
+  .ws-name-text { font-weight: 600; font-size: 14px; }
+  .ws-id-text { font-size: 12px; color: var(--text2); margin-top: 1px; font-variant-numeric: tabular-nums; }
+  .admin-name-text { font-size: 14px; }
+  .admin-email-text { font-size: 12px; color: var(--text2); margin-top: 1px; }
+
+  /* EMPTY */
+  .empty { padding: 48px 24px; text-align: center; color: var(--text2); font-size: 14px; }
+
+  @media (max-width: 640px) {
+    .stats-grid { grid-template-columns: 1fr 1fr; }
+    .content { padding: 70px 16px 40px; }
+    .topbar { padding: 0 16px; }
+  }
+
+  /* Spinner */
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite;
+    display: inline-block; vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card slide-up">
+    <div class="login-icon"><img src="icon.png" alt="MetroClock"/></div>
+    <div class="login-title">MetroClock</div>
+    <div class="login-sub">Sign in to the Control Center</div>
+    <div class="field">
+      <label>Email</label>
+      <input type="email" id="login-email" placeholder="admin@echoproduction.rs" autocomplete="email" onkeydown="if(event.key==='Enter')login()"/>
+    </div>
+    <div class="field">
+      <label>Password</label>
+      <input type="password" id="login-password" placeholder="Password" autocomplete="current-password" onkeydown="if(event.key==='Enter')login()"/>
+    </div>
+    <button class="btn-primary" id="login-btn" onclick="login()">Sign In</button>
+    <div class="login-error" id="login-error"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main-screen">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="topbar-dot"></div>
+      <span class="topbar-title">MetroClock</span>
+      <span class="topbar-badge">Control Center</span>
+    </div>
+    <div class="topbar-right">
+      <span class="topbar-user" id="admin-name"></span>
+      <button class="btn-ghost" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <div class="content fade-in">
+    <div class="page-header">
+      <h1>Workspaces</h1>
+      <p>Manage all client organizations and their user limits</p>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Active Workspaces</div>
+        <div class="stat-value blue" id="stat-workspaces">—</div>
+        <div class="stat-sub">Client organizations</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Users</div>
+        <div class="stat-value" id="stat-users">—</div>
+        <div class="stat-sub">Across all workspaces</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Licensed Seats</div>
+        <div class="stat-value green" id="stat-capacity">—</div>
+        <div class="stat-sub">Total capacity</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2>All Workspaces</h2>
+          <p>Overview of every registered client</p>
+        </div>
+        <button class="btn-new" onclick="openCreate()">+ New Workspace</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Workspace</th>
+              <th>Admin</th>
+              <th>Users</th>
+              <th>Capacity</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="ws-tbody">
+            <tr><td colspan="6"><div class="empty">Loading…</div></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CREATE MODAL -->
+<div class="modal-overlay hidden" id="create-modal" onclick="handleOverlayClick(event,'create-modal')">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-header">
+      <div class="modal-header-text"><h2>New Workspace</h2><p>Create a client organization and admin account</p></div>
+      <button class="modal-close" onclick="closeCreate()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Workspace Name</label><input type="text" id="ws-name" placeholder="e.g. Acme d.o.o."/></div>
+      <div class="form-group"><label>Workspace ID</label><input type="text" id="ws-id" placeholder="e.g. acme" style="font-variant-numeric:tabular-nums"/></div>
+      <div class="form-group"><label>User Limit</label><input type="number" id="ws-max" value="10" min="1"/></div>
+      <hr class="divider"/>
+      <div class="section-label">Admin Account</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group" style="margin:0"><label>First Name</label><input type="text" id="adm-first" placeholder="Marko"/></div>
+        <div class="form-group" style="margin:0"><label>Last Name</label><input type="text" id="adm-last" placeholder="Marković"/></div>
+      </div>
+      <div class="form-group" style="margin-top:12px"><label>Email</label><input type="email" id="adm-email" placeholder="admin@company.com"/></div>
+      <div class="form-group"><label>Password</label><input type="password" id="adm-pass" placeholder="min. 8 characters"/></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-primary" id="create-btn" onclick="createWorkspace()">Create Workspace</button>
+      <span class="msg msg-success" id="create-ok"></span>
+      <span class="msg msg-error" id="create-err"></span>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT LIMIT MODAL -->
+<div class="modal-overlay center hidden" id="limit-modal" onclick="handleOverlayClick(event,'limit-modal')">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header" style="padding:24px 24px 0">
+      <div class="modal-header-text">
+        <h2>User Limit</h2>
+        <p id="limit-ws-name" style="color:var(--text2);font-size:13px;margin-top:3px"></p>
+      </div>
+      <button class="modal-close" onclick="closeLimit()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Maximum Users</label>
+        <input type="number" id="limit-val" min="1"/>
+      </div>
+      <p style="font-size:13px;color:var(--text2)">Current active users: <strong id="limit-current" style="color:var(--text0)"></strong></p>
+    </div>
+    <div class="modal-footer" style="padding-bottom:24px">
+      <button class="btn-primary" onclick="saveLimit()">Save</button>
+      <span class="msg msg-success" id="limit-ok"></span>
+      <span class="msg msg-error" id="limit-err"></span>
+    </div>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyAZjk5uyZciClsji9GCSA1Ov4rZ_XuOe2M",
+  authDomain: "metroclockbyecho.firebaseapp.com",
+  projectId: "metroclockbyecho",
+  storageBucket: "metroclockbyecho.firebasestorage.app",
+  messagingSenderId: "379668362923",
+  appId: "1:379668362923:web:33d12fe3b2346c50f269ee"
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+let workspaces = [];
+let limitWsId = null;
+
+// AUTH
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    const doc = await db.collection('users').doc(user.uid).get();
+    const u = doc.data();
+    if (u?.role === 'superadmin') {
+      document.getElementById('login-screen').style.display = 'none';
+      document.getElementById('main-screen').style.display = 'block';
+      document.getElementById('admin-name').textContent = `${u.firstName || ''} ${u.lastName || ''}`.trim();
+      load();
+    } else {
+      auth.signOut();
+      document.getElementById('login-error').textContent = 'Access denied.';
+    }
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('main-screen').style.display = 'none';
+  }
+});
+
+function login() {
+  const email = document.getElementById('login-email').value.trim();
+  const pw = document.getElementById('login-password').value;
+  const btn = document.getElementById('login-btn');
+  document.getElementById('login-error').textContent = '';
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  auth.signInWithEmailAndPassword(email, pw)
+    .catch(err => {
+      document.getElementById('login-error').textContent = err.message;
+      btn.textContent = 'Sign In'; btn.disabled = false;
+    });
+}
+function logout() { auth.signOut().then(() => { window.location.href = 'https://metroclockbyecho.web.app/'; }); }
+
+// LOAD
+async function load() {
+  const [wsSnap, userSnap] = await Promise.all([
+    db.collection('workspaces').get(),
+    db.collection('users').get()
+  ]);
+  const allUsers = userSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+  workspaces = wsSnap.docs.map(d => {
+    const ws = { id: d.id, ...d.data() };
+    const users = allUsers.filter(u => u.workspaceId === ws.id && u.role !== 'superadmin' && u.isActive !== false);
+    const admin = allUsers.find(u => u.workspaceId === ws.id && u.role === 'admin');
+    return { ...ws, currentUsers: users.length, admin };
+  });
+  renderStats(); renderTable();
+}
+
+function renderStats() {
+  const total = workspaces.reduce((s,w) => s + w.currentUsers, 0);
+  const cap = workspaces.reduce((s,w) => s + (w.maxUsers || 0), 0);
+  document.getElementById('stat-workspaces').textContent = workspaces.filter(w => w.isActive !== false).length;
+  document.getElementById('stat-users').textContent = total;
+  document.getElementById('stat-capacity').textContent = cap || '—';
+}
+
+function renderTable() {
+  const tbody = document.getElementById('ws-tbody');
+  if (!workspaces.length) {
+    tbody.innerHTML = `<tr><td colspan="6"><div class="empty">No workspaces yet</div></td></tr>`;
+    return;
+  }
+  tbody.innerHTML = workspaces.map(ws => {
+    const pct = ws.maxUsers ? Math.min(100, Math.round(ws.currentUsers / ws.maxUsers * 100)) : 0;
+    const barColor = pct >= 90 ? 'var(--red)' : pct >= 70 ? 'var(--orange)' : 'var(--accent)';
+    const active = ws.isActive !== false;
+    return `<tr>
+      <td>
+        <div class="ws-name-text">${ws.name || ws.id}</div>
+        <div class="ws-id-text">${ws.id}</div>
+      </td>
+      <td>
+        <div class="admin-name-text">${ws.admin ? ws.admin.firstName+' '+ws.admin.lastName : '—'}</div>
+        <div class="admin-email-text">${ws.admin?.email || '—'}</div>
+      </td>
+      <td style="font-variant-numeric:tabular-nums;font-weight:600">${ws.currentUsers}</td>
+      <td>
+        <div class="progress-wrap">
+          <div class="progress-bg"><div class="progress-fill" style="width:${pct}%;background:${barColor}"></div></div>
+          <div class="progress-text">${ws.currentUsers} / ${ws.maxUsers ?? '∞'}</div>
+        </div>
+      </td>
+      <td><span class="badge ${active ? 'badge-green' : 'badge-gray'}">${active ? 'Active' : 'Inactive'}</span></td>
+      <td>
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+          <button class="btn-sm blue" onclick="openEdit('${ws.id}')">Edit</button>
+          <button class="btn-sm blue" onclick="openLimit('${ws.id}')">Limit</button>
+          <button class="btn-sm red" onclick="openClearModal('${ws.id}','${ws.name?.replace(/'/g,"\\'")||ws.id}')">Clear Data</button>
+          <button class="btn-sm ${active ? 'red' : ''}" onclick="toggleWs('${ws.id}',${active})">${active ? 'Disable' : 'Enable'}</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+// CREATE
+function openCreate() { document.getElementById('create-modal').classList.remove('hidden'); }
+function closeCreate() {
+  document.getElementById('create-modal').classList.add('hidden');
+  ['ws-name','ws-id','adm-first','adm-last','adm-email','adm-pass'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('ws-max').value = '10';
+  document.getElementById('create-ok').textContent = '';
+  document.getElementById('create-err').textContent = '';
+  const btn = document.getElementById('create-btn');
+  btn.textContent = 'Create Workspace'; btn.disabled = false;
+}
+
+async function createWorkspace() {
+  const wsName = document.getElementById('ws-name').value.trim();
+  const wsId = document.getElementById('ws-id').value.trim().replace(/\s+/g,'').toLowerCase();
+  const maxUsers = parseInt(document.getElementById('ws-max').value) || 10;
+  const firstName = document.getElementById('adm-first').value.trim();
+  const lastName = document.getElementById('adm-last').value.trim();
+  const email = document.getElementById('adm-email').value.trim();
+  const pw = document.getElementById('adm-pass').value;
+  document.getElementById('create-ok').textContent = '';
+  document.getElementById('create-err').textContent = '';
+  if (!wsName||!wsId||!firstName||!lastName||!email||!pw) { document.getElementById('create-err').textContent = 'All fields are required.'; return; }
+  if (pw.length < 8) { document.getElementById('create-err').textContent = 'Password must be at least 8 characters.'; return; }
+  const btn = document.getElementById('create-btn');
+  btn.innerHTML = '<span class="spinner"></span>'; btn.disabled = true;
+  try {
+    const existing = await db.collection('workspaces').doc(wsId).get();
+    if (existing.exists) { document.getElementById('create-err').textContent = 'Workspace ID already exists.'; btn.textContent='Create Workspace';btn.disabled=false; return; }
+
+    // Save superadmin credentials to re-login after creating new user
+    // (Firebase Auth REST signUp changes the current auth session)
+    const currentUser = auth.currentUser;
+    const superadminEmail = currentUser.email;
+
+    // Prompt for superadmin password to re-authenticate after
+    const superadminPw = prompt('Enter your Super Admin password to confirm:');
+    if (!superadminPw) { btn.textContent='Create Workspace';btn.disabled=false; return; }
+
+    // Create new Firebase Auth user via REST (does NOT affect current session)
+    const res = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${firebaseConfig.apiKey}`, {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ email, password: pw, returnSecureToken: true })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    // Write Firestore docs using the new user's UID
+    await db.collection('workspaces').doc(wsId).set({ name: wsName, maxUsers, isActive: true, createdAt: firebase.firestore.Timestamp.now() });
+    await db.collection('users').doc(data.localId).set({ firstName, lastName, email, role: 'admin', workspaceId: wsId, isActive: true, createdAt: firebase.firestore.Timestamp.now() });
+
+    // Re-authenticate as superadmin (REST signUp signed us out)
+    await auth.signInWithEmailAndPassword(superadminEmail, superadminPw);
+
+    document.getElementById('create-ok').textContent = `✓ "${wsName}" created successfully`;
+    setTimeout(() => { closeCreate(); load(); }, 1400);
+  } catch(e) {
+    document.getElementById('create-err').textContent = e.message;
+    btn.textContent = 'Create Workspace'; btn.disabled = false;
+  }
+}
+
+// LIMIT
+function openLimit(wsId) {
+  const ws = workspaces.find(w => w.id === wsId); if (!ws) return;
+  limitWsId = wsId;
+  document.getElementById('limit-ws-name').textContent = ws.name || wsId;
+  document.getElementById('limit-val').value = ws.maxUsers || 10;
+  document.getElementById('limit-current').textContent = ws.currentUsers;
+  document.getElementById('limit-ok').textContent = '';
+  document.getElementById('limit-err').textContent = '';
+  document.getElementById('limit-modal').classList.remove('hidden');
+}
+function closeLimit() { document.getElementById('limit-modal').classList.add('hidden'); limitWsId = null; }
+async function saveLimit() {
+  if (!limitWsId) return;
+  const val = parseInt(document.getElementById('limit-val').value);
+  const ws = workspaces.find(w => w.id === limitWsId);
+  if (val < ws.currentUsers) { document.getElementById('limit-err').textContent = `Cannot set below current users (${ws.currentUsers}).`; return; }
+  try {
+    await db.collection('workspaces').doc(limitWsId).update({ maxUsers: val });
+    document.getElementById('limit-ok').textContent = '✓ Saved';
+    setTimeout(() => { closeLimit(); load(); }, 900);
+  } catch(e) { document.getElementById('limit-err').textContent = e.message; }
+}
+
+// TOGGLE
+async function toggleWs(wsId, isActive) {
+  if (isActive && !confirm(`Disable "${workspaces.find(w=>w.id===wsId)?.name || wsId}"?`)) return;
+  await db.collection('workspaces').doc(wsId).update({ isActive: !isActive });
+  load();
+}
+
+// CLOSE ON OVERLAY CLICK
+function handleOverlayClick(e, id) {
+  if (e.target === document.getElementById(id)) {
+    if (id === 'create-modal') closeCreate();
+    if (id === 'limit-modal') closeLimit();
+    if (id === 'edit-modal') closeEdit();
+    if (id === 'clear-modal') closeClearModal();
+  }
+}
+
+// EDIT WORKSPACE MODAL
+let editWsId = null;
+function openEdit(wsId) {
+  editWsId = wsId;
+  const ws = workspaces.find(w => w.id === wsId); if (!ws) return;
+  document.getElementById('edit-ws-subtitle').textContent = wsId;
+  document.getElementById('edit-ws-name').value = ws.name || '';
+  document.getElementById('edit-ws-id').value = wsId;
+  document.getElementById('edit-adm-first').value = ws.admin?.firstName || '';
+  document.getElementById('edit-adm-last').value = ws.admin?.lastName || '';
+  document.getElementById('edit-adm-email').value = ws.admin?.email || '';
+  document.getElementById('edit-ok').textContent = '';
+  document.getElementById('edit-err').textContent = '';
+  document.getElementById('edit-modal').classList.remove('hidden');
+}
+function closeEdit() {
+  document.getElementById('edit-modal').classList.add('hidden');
+  editWsId = null;
+}
+
+async function saveEdit() {
+  if (!editWsId) return;
+  const newName  = document.getElementById('edit-ws-name').value.trim();
+  const newWsId  = document.getElementById('edit-ws-id').value.trim();
+  const admFirst = document.getElementById('edit-adm-first').value.trim();
+  const admLast  = document.getElementById('edit-adm-last').value.trim();
+  const admEmail = document.getElementById('edit-adm-email').value.trim();
+  if (!newName || !newWsId) { document.getElementById('edit-err').textContent = 'Name and Workspace ID are required.'; return; }
+
+  const idChanged = newWsId !== editWsId;
+  if (idChanged && !confirm(`Rename workspace ID from "${editWsId}" to "${newWsId}"?\n\nThis will migrate ALL users, clock events, requests and offices to the new ID. This may take a moment.`)) return;
+
+  document.getElementById('edit-ok').textContent = idChanged ? 'Migrating…' : 'Saving…';
+  document.getElementById('edit-err').textContent = '';
+  try {
+    if (idChanged) {
+      // 1. Copy workspace doc to new ID
+      const oldSnap = await db.collection('workspaces').doc(editWsId).get();
+      await db.collection('workspaces').doc(newWsId).set({ ...oldSnap.data(), name: newName });
+
+      // 2. Migrate all related collections
+      const collections = ['users', 'clockEvents', 'requests', 'offices'];
+      for (const col of collections) {
+        const snap = await db.collection(col).where('workspaceId', '==', editWsId).get();
+        for (let i = 0; i < snap.docs.length; i += 500) {
+          const batch = db.batch();
+          snap.docs.slice(i, i + 500).forEach(d => batch.update(d.ref, { workspaceId: newWsId }));
+          await batch.commit();
+        }
+      }
+
+      // 3. Delete old workspace doc
+      await db.collection('workspaces').doc(editWsId).delete();
+      editWsId = newWsId;
+    } else {
+      await db.collection('workspaces').doc(editWsId).update({ name: newName });
+    }
+
+    // Update admin user fields
+    const ws = workspaces.find(w => w.id === (idChanged ? newWsId : editWsId));
+    if (ws?.admin?.id) {
+      await db.collection('users').doc(ws.admin.id).update({ firstName: admFirst, lastName: admLast, email: admEmail });
+    }
+
+    document.getElementById('edit-ok').textContent = '✓ Saved!';
+    setTimeout(() => { closeEdit(); load(); }, 1000);
+  } catch(e) {
+    document.getElementById('edit-ok').textContent = '';
+    document.getElementById('edit-err').textContent = e.message;
+  }
+}
+
+// CLEAR DATA MODAL
+let clearWsId = null;
+function openClearModal(wsId, wsName) {
+  clearWsId = wsId;
+  document.getElementById('clear-modal-name').textContent = wsName;
+  document.getElementById('clear-status').textContent = '';
+  document.getElementById('clear-modal').classList.remove('hidden');
+}
+function closeClearModal() {
+  document.getElementById('clear-modal').classList.add('hidden');
+  clearWsId = null;
+}
+
+async function clearWorkspaceCollection(collection) {
+  if (!clearWsId) return;
+  const wsName = document.getElementById('clear-modal-name').textContent;
+  const label = collection === 'clockEvents' ? 'all clock events' : 'all requests';
+  if (!confirm(`⚠️ This will permanently delete ${label} for "${wsName}".\n\nThis action cannot be undone. Are you sure?`)) return;
+
+  document.getElementById('clear-status').textContent = 'Deleting…';
+  try {
+    const snap = await db.collection(collection).where('workspaceId', '==', clearWsId).get();
+    if (snap.empty) { document.getElementById('clear-status').textContent = 'Nothing to delete.'; return; }
+
+    // Delete in batches of 500 (Firestore limit)
+    const chunks = [];
+    for (let i = 0; i < snap.docs.length; i += 500) chunks.push(snap.docs.slice(i, i + 500));
+    for (const chunk of chunks) {
+      const batch = db.batch();
+      chunk.forEach(doc => batch.delete(doc.ref));
+      await batch.commit();
+    }
+    document.getElementById('clear-status').textContent = `✓ Deleted ${snap.docs.length} ${collection === 'clockEvents' ? 'clock event(s)' : 'request(s)'}.`;
+  } catch(e) {
+    document.getElementById('clear-status').textContent = '✗ Error: ' + e.message;
+  }
+}
+</script>
+
+<!-- EDIT WORKSPACE MODAL -->
+<div class="modal-overlay center hidden" id="edit-modal" onclick="handleOverlayClick(event,'edit-modal')">
+  <div class="modal" style="max-width:440px">
+    <div class="modal-header" style="padding:24px 24px 0">
+      <div class="modal-header-text"><h2>Edit Workspace</h2><p id="edit-ws-subtitle"></p></div>
+      <button class="modal-close" onclick="closeEdit()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group"><label>Workspace Name</label><input type="text" id="edit-ws-name" placeholder="Company name"/></div>
+      <div class="form-group">
+        <label>Workspace ID <span style="color:var(--text3);font-weight:400;font-size:11px">(changing this migrates all data)</span></label>
+        <input type="text" id="edit-ws-id" placeholder="e.g. echo-production" style="font-family:'DM Mono',monospace;font-size:13px"/>
+      </div>
+      <hr class="divider"/>
+      <div class="section-label">Admin Account</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group" style="margin:0"><label>First Name</label><input type="text" id="edit-adm-first"/></div>
+        <div class="form-group" style="margin:0"><label>Last Name</label><input type="text" id="edit-adm-last"/></div>
+      </div>
+      <div class="form-group" style="margin-top:12px"><label>Email</label><input type="email" id="edit-adm-email"/></div>
+    </div>
+    <div class="modal-footer" style="padding-bottom:24px">
+      <button class="btn-primary" onclick="saveEdit()">Save Changes</button>
+      <span class="msg msg-success" id="edit-ok"></span>
+      <span class="msg msg-error" id="edit-err"></span>
+    </div>
+  </div>
+</div>
+
+<!-- CLEAR DATA MODAL -->
+<div class="modal-overlay center hidden" id="clear-modal" onclick="handleOverlayClick(event,'clear-modal')">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-header" style="padding:24px 24px 0">
+      <div class="modal-header-text">
+        <h2 style="color:var(--red)">⚠ Clear Workspace Data</h2>
+        <p id="clear-modal-name" style="color:var(--text2);margin-top:2px"></p>
+      </div>
+      <button class="modal-close" onclick="closeClearModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text1);line-height:1.6;margin-bottom:20px">
+        Select what to permanently delete for this workspace. A confirmation dialog will appear before each action. <strong style="color:var(--red)">This cannot be undone.</strong>
+      </p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn-sm red" style="padding:10px 16px;font-size:13px;text-align:left" onclick="clearWorkspaceCollection('clockEvents')">
+          🕐 &nbsp;Delete all Clock Events
+        </button>
+        <button class="btn-sm red" style="padding:10px 16px;font-size:13px;text-align:left" onclick="clearWorkspaceCollection('requests')">
+          📋 &nbsp;Delete all Requests
+        </button>
+      </div>
+      <p id="clear-status" style="font-size:12px;color:var(--text2);margin-top:14px;min-height:18px"></p>
+    </div>
+    <div class="modal-footer" style="padding-bottom:24px">
+      <button class="btn-sm" onclick="closeClearModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

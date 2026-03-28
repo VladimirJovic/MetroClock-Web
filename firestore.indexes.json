@@ -1,0 +1,147 @@
+{
+  "indexes": [
+
+    // ── clockEvents ──────────────────────────────────────────────────────────
+
+    // ClockService.fetchTodayEvents: userId + timestamp (iOS & Android)
+    {
+      "collectionGroup": "clockEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId",    "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+
+    // BadgeService.listenOpenSessions: userId IN [...] + timestamp >= yesterday
+    {
+      "collectionGroup": "clockEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId",    "order": "ASCENDING" },
+        { "fieldPath": "timestamp", "order": "ASCENDING" }
+      ]
+    },
+
+    // BadgeService.listenPendingOvertime: userId IN [...] + overtimeNote != ""
+    {
+      "collectionGroup": "clockEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId",         "order": "ASCENDING" },
+        { "fieldPath": "overtimeNote",   "order": "ASCENDING" }
+      ]
+    },
+
+    // Web admin live dashboard: workspaceId + timestamp range
+    {
+      "collectionGroup": "clockEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workspaceId", "order": "ASCENDING" },
+        { "fieldPath": "timestamp",   "order": "ASCENDING" }
+      ]
+    },
+
+    // Web export: workspaceId + timestamp range
+    {
+      "collectionGroup": "clockEvents",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workspaceId", "order": "ASCENDING" },
+        { "fieldPath": "userId",      "order": "ASCENDING" },
+        { "fieldPath": "timestamp",   "order": "ASCENDING" }
+      ]
+    },
+
+    // ── requests ─────────────────────────────────────────────────────────────
+
+    // BadgeService.listenForPendingRequests: managerId + status
+    {
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "managerId", "order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" }
+      ]
+    },
+
+    // BadgeService.listenForResolvedRequests (employee): userId + status IN [...]
+    {
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+
+    // ClockService.fetchApprovedRemoteHoursToday: userId + type + status + date range
+    {
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "type",   "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "date",   "order": "ASCENDING" }
+      ]
+    },
+
+    // TeamHoursView remote entries: userId + type + status
+    {
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "userId", "order": "ASCENDING" },
+        { "fieldPath": "type",   "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+
+    // Web live dashboard: workspaceId + status + type (remoteWork)
+    {
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workspaceId", "order": "ASCENDING" },
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "type",        "order": "ASCENDING" }
+      ]
+    },
+
+    // Web export: workspaceId + dateFrom range
+    {
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workspaceId", "order": "ASCENDING" },
+        { "fieldPath": "dateFrom",    "order": "ASCENDING" }
+      ]
+    },
+
+    // Web export legacy: workspaceId + date range
+    {
+      "collectionGroup": "requests",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "workspaceId", "order": "ASCENDING" },
+        { "fieldPath": "date",        "order": "ASCENDING" }
+      ]
+    },
+
+    // ── users ─────────────────────────────────────────────────────────────────
+
+    // BadgeService.listenForDirectReports: managerId + isActive
+    {
+      "collectionGroup": "users",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "managerId", "order": "ASCENDING" },
+        { "fieldPath": "isActive",  "order": "ASCENDING" }
+      ]
+    }
+
+  ],
+  "fieldOverrides": []
+}

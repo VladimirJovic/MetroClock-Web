@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MetroClock — Vodič za korisnike</title>
+<link rel="icon" href="icon.png"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #141417;
+  --surface: #19191E;
+  --surface2: #1D1D23;
+  --border: #23232A;
+  --border2: #2E2E37;
+  --orange: #EA4500;
+  --orange-dim: rgba(234,69,0,0.1);
+  --orange-glow: rgba(234,69,0,0.22);
+  --green: #2DD47E;
+  --red: #F55252;
+  --blue: #5B8EF5;
+  --text: #F1F1F3;
+  --text2: #7a7a8e;
+  --text3: #3a3a4a;
+  --mono: 'DM Mono', monospace;
+  --r-btn: 14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;line-height:1.6;overflow-x:hidden;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px;}
+
+/* ── CANVAS BG ── */
+#bg-canvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+.bg-orbs{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.orb{position:absolute;border-radius:50%;filter:blur(100px);opacity:0;animation:orb-drift var(--d,30s) var(--delay,0s) ease-in-out infinite;}
+.orb1{width:600px;height:600px;background:radial-gradient(circle,rgba(234,69,0,0.18) 0%,transparent 70%);top:-10%;left:-10%;--d:28s;--delay:0s;animation-name:orb-drift-1;}
+.orb2{width:500px;height:500px;background:radial-gradient(circle,rgba(45,212,126,0.06) 0%,transparent 70%);top:40%;right:-15%;--d:35s;--delay:-10s;animation-name:orb-drift-2;}
+.orb3{width:400px;height:400px;background:radial-gradient(circle,rgba(234,69,0,0.08) 0%,transparent 70%);bottom:-5%;left:30%;--d:40s;--delay:-20s;animation-name:orb-drift-3;}
+@keyframes orb-drift-1{0%{transform:translate(0,0);opacity:0.6;}30%{transform:translate(120px,80px);opacity:0.9;}60%{transform:translate(60px,180px);opacity:0.5;}100%{transform:translate(0,0);opacity:0.6;}}
+@keyframes orb-drift-2{0%{transform:translate(0,0);opacity:0.5;}40%{transform:translate(-100px,60px);opacity:0.8;}70%{transform:translate(-40px,-80px);opacity:0.4;}100%{transform:translate(0,0);opacity:0.5;}}
+@keyframes orb-drift-3{0%{transform:translate(0,0);opacity:0.4;}50%{transform:translate(80px,-60px);opacity:0.7;}100%{transform:translate(0,0);opacity:0.4;}}
+
+/* Grid overlay */
+.bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px);
+  background-size:64px 64px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,black 40%,transparent 100%);}
+
+/* Everything above canvas */
+nav,.hero,section,.role-section,footer{position:relative;z-index:1;}
+
+/* ── NAV ── */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:62px;background:rgba(7,7,10,0.85);backdrop-filter:blur(24px);border-bottom:1px solid rgba(255,255,255,0.04);}
+.nav-logo{display:flex;align-items:center;gap:10px;text-decoration:none;}
+.nav-logo-mark{width:32px;height:32px;border-radius:9px;overflow:hidden;display:grid;place-items:center;}
+.nav-logo-mark img{width:32px;height:32px;border-radius:9px;display:block;}
+.nav-logo-text{font-weight:700;font-size:15px;color:var(--text);letter-spacing:-0.025em;}
+.nav-logo-text span{color:var(--orange);}
+.nav-version{font-family:var(--mono);font-size:10px;color:var(--text3);padding:3px 8px;border:1px solid var(--border);border-radius:100px;}
+
+/* ── HERO ── */
+.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px 24px 80px;}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--border2);border-radius:100px;padding:6px 16px;font-size:11px;color:var(--text2);margin-bottom:32px;font-family:var(--mono);background:rgba(13,13,19,0.8);backdrop-filter:blur(12px);}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green);animation:pulse 2.5s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 10px var(--green);}50%{opacity:0.4;box-shadow:0 0 4px var(--green);}}
+.hero h1{font-size:clamp(48px,7vw,84px);font-weight:700;line-height:1.0;letter-spacing:-0.04em;margin-bottom:22px;}
+.hero h1 .line1{background:linear-gradient(180deg,#fff 0%,rgba(255,255,255,0.6) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.hero h1 .line2{color:var(--orange);-webkit-text-fill-color:var(--orange);}
+.hero-sub{font-size:17px;color:var(--text2);max-width:500px;line-height:1.75;margin:0 auto 56px;}
+.hero-btns{display:flex;gap:14px;margin-bottom:80px;}
+.hero-btn{padding:16px 36px;border-radius:var(--r-btn);font-size:15px;font-weight:600;cursor:pointer;transition:all 0.25s cubic-bezier(0.23,1,0.32,1);font-family:'DM Sans',sans-serif;border:none;letter-spacing:-0.01em;}
+.hero-btn.primary{background:var(--orange);color:#fff;box-shadow:0 0 40px rgba(234,69,0,0.35),0 8px 24px rgba(234,69,0,0.2);}
+.hero-btn.primary:hover{background:#FF4D00;box-shadow:0 0 60px rgba(234,69,0,0.5),0 12px 32px rgba(234,69,0,0.3);transform:translateY(-2px);}
+.hero-btn.secondary{background:rgba(13,13,19,0.9);color:var(--text);border:1px solid var(--border2);backdrop-filter:blur(12px);}
+.hero-btn.secondary:hover{border-color:var(--orange);color:var(--orange);transform:translateY(-2px);}
+.hero-scroll{display:flex;flex-direction:column;align-items:center;gap:10px;font-size:11px;color:var(--text3);font-family:var(--mono);animation:hero-scroll-fade 2s ease-in-out infinite;}
+@keyframes hero-scroll-fade{0%,100%{opacity:0.4;}50%{opacity:1;}}
+.hero-scroll-line{width:1px;height:48px;background:linear-gradient(to bottom,rgba(255,255,255,0.15),transparent);}
+
+/* ── SECTION ── */
+.section{padding:100px 24px;max-width:1100px;margin:0 auto;}
+.section-header{text-align:center;margin-bottom:72px;}
+.eyebrow{font-family:var(--mono);font-size:11px;color:var(--orange);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:14px;}
+.section-title{font-size:clamp(30px,4.5vw,52px);font-weight:700;letter-spacing:-0.035em;line-height:1.08;}
+.section-sub{font-size:16px;color:var(--text2);margin-top:16px;max-width:500px;margin-left:auto;margin-right:auto;line-height:1.75;}
+
+/* ── STEP LAYOUT ── */
+.step{display:grid;grid-template-columns:1fr 1fr;gap:96px;align-items:center;margin-bottom:140px;}
+.step.reverse{direction:rtl;}
+.step.reverse>*{direction:ltr;}
+.step-num{font-family:var(--mono);font-size:10px;color:var(--orange);letter-spacing:0.12em;margin-bottom:18px;display:flex;align-items:center;gap:12px;opacity:0.8;}
+.step-num::after{content:'';flex:1;height:1px;background:var(--border);}
+.step-title{font-size:clamp(22px,3vw,32px);font-weight:700;letter-spacing:-0.025em;margin-bottom:16px;line-height:1.2;}
+.step-body{color:var(--text2);line-height:1.8;font-size:15px;}
+.step-body p{margin-bottom:14px;}
+.step-body strong{color:var(--text);font-weight:600;}
+
+/* ── TIPS ── */
+.tip{margin-top:22px;padding:14px 18px;border-radius:10px;border-left:3px solid;font-size:13px;line-height:1.65;}
+.tip.orange{border-color:var(--orange);background:rgba(234,69,0,0.07);color:#f09070;}
+.tip.green{border-color:var(--green);background:rgba(45,212,126,0.06);color:#70dfa8;}
+.tip.blue{border-color:var(--blue);background:rgba(91,142,245,0.07);color:#9ab5f8;}
+.tip-label{font-weight:600;display:block;margin-bottom:3px;color:inherit;}
+
+/* ── STEPS LIST ── */
+.steps-list{display:flex;flex-direction:column;gap:14px;margin-top:22px;}
+.steps-list-item{display:flex;gap:14px;align-items:flex-start;}
+.step-bullet{width:22px;height:22px;border-radius:50%;background:var(--orange-dim);border:1px solid rgba(234,69,0,0.3);color:var(--orange);font-size:10px;font-weight:700;display:grid;place-items:center;flex-shrink:0;margin-top:2px;font-family:var(--mono);}
+.step-text{font-size:14px;color:var(--text2);line-height:1.65;}
+.step-text strong{color:var(--text);}
+
+/* ── 3D PHONE ── */
+.phone-outer{display:flex;justify-content:center;align-items:center;perspective:1200px;perspective-origin:50% 50%;}
+.phone-wrapper{
+  transform:rotateY(-18deg) rotateX(7deg) rotateZ(-1deg);
+  transform-style:preserve-3d;
+  transition:transform 0.5s cubic-bezier(0.23,1,0.32,1);
+  animation:phone-float 5s ease-in-out infinite;
+  will-change:transform;
+}
+.step.reverse .phone-wrapper{
+  transform:rotateY(18deg) rotateX(7deg) rotateZ(1deg);
+  animation-name:phone-float-r;
+}
+@keyframes phone-float{
+  0%,100%{transform:rotateY(-18deg) rotateX(7deg) rotateZ(-1deg) translateY(0);}
+  50%{transform:rotateY(-18deg) rotateX(7deg) rotateZ(-1deg) translateY(-14px);}
+}
+@keyframes phone-float-r{
+  0%,100%{transform:rotateY(18deg) rotateX(7deg) rotateZ(1deg) translateY(0);}
+  50%{transform:rotateY(18deg) rotateX(7deg) rotateZ(1deg) translateY(-14px);}
+}
+.phone-wrapper:hover{animation-play-state:paused;}
+.phone{
+  width:255px;height:530px;border-radius:42px;
+  background:linear-gradient(145deg,#16161f,#0a0a10);
+  border:1.5px solid rgba(255,255,255,0.08);
+  box-shadow:
+    0 0 0 1px rgba(0,0,0,0.8),
+    inset 0 1px 0 rgba(255,255,255,0.06),
+    0 60px 100px rgba(0,0,0,0.8),
+    0 30px 60px rgba(0,0,0,0.5),
+    0 0 80px rgba(234,69,0,0.06),
+    20px 20px 60px rgba(0,0,0,0.6);
+  position:relative;overflow:hidden;
+}
+.step.reverse .phone{box-shadow:
+  0 0 0 1px rgba(0,0,0,0.8),
+  inset 0 1px 0 rgba(255,255,255,0.06),
+  0 60px 100px rgba(0,0,0,0.8),
+  0 30px 60px rgba(0,0,0,0.5),
+  0 0 80px rgba(234,69,0,0.06),
+  -20px 20px 60px rgba(0,0,0,0.6);}
+/* Side buttons */
+.phone::before{content:'';position:absolute;left:-3px;top:100px;width:3px;height:40px;background:linear-gradient(to right,#222,#333);border-radius:2px 0 0 2px;}
+.phone::after{content:'';position:absolute;right:-3px;top:120px;width:3px;height:60px;background:linear-gradient(to left,#222,#333);border-radius:0 2px 2px 0;}
+.phone-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:90px;height:26px;background:#0a0a10;border-radius:0 0 16px 16px;z-index:10;}
+.phone-screen{position:absolute;inset:0;overflow:hidden;border-radius:42px;}
+.phone-status{display:flex;justify-content:space-between;align-items:center;padding:10px 20px 4px;font-size:10px;color:#555;font-family:var(--mono);position:relative;z-index:5;}
+
+/* ── SCREEN UI ── */
+.s-login{display:flex;flex-direction:column;justify-content:center;padding:32px 22px;gap:18px;height:100%;background:var(--bg);}
+.s-login-logo{text-align:center;margin-bottom:6px;}
+.s-logo-mark{width:50px;height:50px;border-radius:14px;overflow:hidden;display:inline-block;margin-bottom:10px;box-shadow:0 0 24px rgba(234,69,0,0.4);}
+.s-logo-mark img{width:50px;height:50px;display:block;}
+.s-login-logo h2{font-size:17px;font-weight:700;letter-spacing:-0.02em;}
+.s-login-logo p{font-size:10px;color:var(--text2);margin-top:2px;font-family:var(--mono);}
+.s-input-label{font-size:9px;color:var(--text2);margin-bottom:4px;font-family:var(--mono);letter-spacing:0.06em;}
+.s-input{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text);}
+.s-btn{background:var(--orange);color:#fff;border-radius:8px;padding:12px;text-align:center;font-size:12px;font-weight:700;letter-spacing:0.01em;}
+.s-link{text-align:center;font-size:10px;color:var(--text2);}
+.s-link span{color:var(--orange);}
+
+.s-clock{display:flex;flex-direction:column;height:100%;background:var(--bg);}
+.s-clock-header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px 8px;}
+.s-user-info{display:flex;align-items:center;gap:9px;}
+.s-avatar{width:30px;height:30px;border-radius:50%;background:var(--orange);display:grid;place-items:center;font-size:11px;font-weight:700;flex-shrink:0;font-family:var(--mono);}
+.s-username{font-size:13px;font-weight:600;}
+.s-role-tag{font-size:9px;color:var(--text2);font-family:var(--mono);}
+.s-menu-icon{width:22px;height:14px;display:flex;flex-direction:column;justify-content:space-between;}
+.s-menu-icon span{display:block;height:1.5px;background:var(--text2);border-radius:1px;}
+.s-menu-icon span:last-child{width:60%;}
+
+.s-clock-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:0 18px 24px;}
+.s-wifi{font-size:10px;color:var(--green);font-family:var(--mono);display:flex;align-items:center;gap:5px;}
+.s-wifi-dot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);}
+.s-flip-clock{display:flex;gap:5px;align-items:center;}
+.s-flip-digit{background:var(--surface);border:1px solid var(--border);border-radius:7px;width:42px;height:50px;display:grid;place-items:center;font-size:24px;font-family:var(--mono);font-weight:500;box-shadow:inset 0 1px 0 rgba(255,255,255,0.04);}
+.s-colon{font-size:20px;font-family:var(--mono);color:var(--orange);margin:0 -1px;}
+.s-clock-btn{width:88px;height:88px;border-radius:50%;position:relative;display:grid;place-items:center;}
+.s-clock-btn-ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,var(--orange),#FF6B35,#FFB347,var(--orange),#C83D00,var(--orange));animation:spin-ring 5s linear infinite;}
+@keyframes spin-ring{to{transform:rotate(360deg);}}
+.s-clock-btn-inner{position:absolute;inset:5px;border-radius:50%;background:#07070e;display:grid;place-items:center;}
+.s-clock-btn-label{font-size:9.5px;font-weight:700;color:var(--orange);font-family:var(--mono);letter-spacing:0.06em;line-height:1.3;text-align:center;}
+.s-clock-btn.out .s-clock-btn-ring{background:conic-gradient(from 0deg,var(--green),#50e99c,#a0f5c8,var(--green),#1db362,var(--green));}
+.s-clock-btn.out .s-clock-btn-label{color:var(--green);}
+.s-elapsed{font-family:var(--mono);font-size:11px;color:var(--text2);}
+
+.s-status-bar{display:flex;justify-content:space-around;padding:10px 18px;border-top:1px solid var(--border);}
+.s-status-item{text-align:center;}
+.s-status-label{font-size:8px;color:var(--text2);font-family:var(--mono);letter-spacing:0.06em;}
+.s-status-val{font-size:12px;font-weight:600;margin-top:2px;}
+
+.s-bottom-nav{position:absolute;bottom:8px;left:8px;right:8px;background:#0f0f17;border:1px solid var(--border);border-radius:22px;display:flex;justify-content:space-around;align-items:center;padding:5px 2px;}
+.s-nav-item{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:8px;font-weight:500;color:var(--text2);padding:5px 8px;border-radius:14px;font-family:var(--mono);}
+.s-nav-item.active{color:var(--orange);background:rgba(234,69,0,0.13);}
+.s-nav-ico{width:18px;height:18px;display:flex;align-items:center;justify-content:center;margin-bottom:1px;}
+.s-nav-ico svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;}
+
+.s-page-header{padding:14px 18px 10px;border-bottom:1px solid var(--border);}
+.s-page-title{font-size:16px;font-weight:700;}
+.s-page-sub{font-size:10px;color:var(--text2);margin-top:1px;font-family:var(--mono);}
+.s-req-list{flex:1;padding:12px;display:flex;flex-direction:column;gap:8px;overflow:hidden;}
+.s-req-item{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px;display:flex;justify-content:space-between;align-items:flex-start;}
+.s-req-type{font-size:11px;font-weight:600;}
+.s-req-date{font-size:10px;color:var(--text2);margin-top:1px;font-family:var(--mono);}
+.s-badge{font-size:9px;padding:3px 8px;border-radius:100px;font-weight:700;font-family:var(--mono);}
+.s-badge.pending{background:rgba(234,69,0,0.12);color:var(--orange);}
+.s-badge.approved{background:rgba(45,212,126,0.12);color:var(--green);}
+.s-badge.rejected{background:rgba(245,82,82,0.1);color:var(--red);}
+.s-fab{position:absolute;bottom:66px;right:14px;width:36px;height:36px;background:var(--orange);border-radius:50%;display:grid;place-items:center;font-size:20px;color:#fff;font-weight:300;box-shadow:0 4px 20px rgba(234,69,0,0.45);}
+
+.s-sheet{position:absolute;inset:0;background:var(--bg);border-radius:42px;overflow:hidden;display:flex;flex-direction:column;}
+.s-sheet-handle{width:34px;height:4px;background:var(--border2);border-radius:2px;margin:10px auto 0;}
+.s-sheet-title{font-size:15px;font-weight:700;padding:12px 18px 0;}
+.s-sheet-body{flex:1;padding:12px 18px;display:flex;flex-direction:column;gap:10px;overflow:hidden;}
+.s-segment{display:flex;background:var(--surface);border-radius:8px;padding:2px;gap:2px;}
+.s-seg-btn{flex:1;padding:6px 4px;border-radius:6px;font-size:10px;text-align:center;font-weight:500;color:var(--text2);}
+.s-seg-btn.active{background:var(--surface2);color:var(--text);border:1px solid var(--border2);}
+.s-date-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.s-date-field{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;}
+.s-date-label{font-size:9px;color:var(--text2);font-family:var(--mono);}
+.s-date-val{font-size:12px;font-weight:600;margin-top:2px;}
+.s-textarea{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text2);min-height:50px;}
+.s-submit{background:var(--orange);color:#fff;border-radius:9px;padding:12px;text-align:center;font-size:12px;font-weight:700;}
+
+.s-inbox-item{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px;}
+.s-inbox-user{display:flex;align-items:center;gap:7px;margin-bottom:5px;}
+.s-inbox-name{font-size:11px;font-weight:600;}
+.s-inbox-type{font-size:10px;color:var(--text2);}
+.s-inbox-dates{font-size:10px;color:var(--text2);font-family:var(--mono);margin-bottom:8px;}
+.s-inbox-note{font-size:10px;color:var(--text2);font-style:italic;margin-bottom:8px;}
+.s-inbox-actions{display:flex;gap:6px;}
+.s-inbox-btn{flex:1;padding:7px;border-radius:7px;font-size:10px;font-weight:700;text-align:center;font-family:var(--mono);}
+.s-inbox-btn.approve{background:rgba(45,212,126,0.12);color:var(--green);}
+.s-inbox-btn.reject{background:rgba(245,82,82,0.08);color:var(--red);}
+
+.s-team-row{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+.s-team-name{font-size:11px;font-weight:600;}
+.s-team-sub{font-size:10px;color:var(--text2);margin-top:1px;}
+.s-team-hours{font-family:var(--mono);font-size:13px;font-weight:600;}
+
+.s-profile{display:flex;flex-direction:column;height:100%;background:var(--bg);padding-bottom:55px;}
+.s-profile-hero{padding:24px 18px 18px;text-align:center;border-bottom:1px solid var(--border);}
+.s-profile-avatar{width:58px;height:58px;border-radius:50%;background:var(--orange);display:inline-grid;place-items:center;font-size:20px;font-weight:700;margin-bottom:10px;box-shadow:0 0 24px rgba(234,69,0,0.3);font-family:var(--mono);}
+.s-profile-name{font-size:15px;font-weight:700;}
+.s-profile-email{font-size:10px;color:var(--text2);margin-top:2px;font-family:var(--mono);}
+.s-profile-badge{display:inline-block;margin-top:8px;padding:3px 12px;border-radius:100px;font-size:10px;font-weight:700;background:var(--orange-dim);color:var(--orange);font-family:var(--mono);}
+.s-profile-rows{padding:12px;display:flex;flex-direction:column;gap:6px;}
+.s-profile-row{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px;display:flex;justify-content:space-between;align-items:center;}
+.s-profile-row-label{font-size:11px;color:var(--text2);}
+.s-profile-row-val{font-size:11px;font-weight:600;font-family:var(--mono);}
+
+/* ── FEATURE GRID ── */
+.feature-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:48px;}
+.feature-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:24px;transition:border-color 0.25s,transform 0.25s,box-shadow 0.25s;}
+.feature-card:hover{border-color:rgba(234,69,0,0.25);transform:translateY(-3px);box-shadow:0 20px 40px rgba(0,0,0,0.4),0 0 30px rgba(234,69,0,0.05);}
+.feature-icon{width:40px;height:40px;border-radius:10px;background:var(--orange-dim);border:1px solid rgba(234,69,0,0.15);display:grid;place-items:center;margin-bottom:16px;}
+.feature-icon svg{width:18px;height:18px;fill:none;stroke:var(--orange);stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.feature-title{font-size:14px;font-weight:700;margin-bottom:6px;letter-spacing:-0.01em;}
+.feature-desc{font-size:13px;color:var(--text2);line-height:1.65;}
+
+/* ── INTEGRATION CARD ── */
+.int-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px 32px;display:flex;gap:20px;align-items:flex-start;margin-top:16px;transition:border-color 0.2s;}
+.int-card:hover{border-color:var(--border2);}
+.int-card:first-of-type{margin-top:48px;}
+.int-icon-wrap{width:48px;height:48px;border-radius:12px;display:grid;place-items:center;flex-shrink:0;}
+.int-icon-wrap svg{width:22px;height:22px;}
+.int-title{font-size:15px;font-weight:700;margin-bottom:5px;letter-spacing:-0.01em;}
+.int-desc{font-size:13px;color:var(--text2);line-height:1.7;}
+
+/* ── MANAGER NOTE ── */
+.manager-note{background:rgba(234,69,0,0.05);border:1px solid rgba(234,69,0,0.15);border-radius:14px;padding:22px 26px;margin-bottom:56px;display:flex;gap:16px;align-items:flex-start;}
+.mn-icon{width:36px;height:36px;border-radius:9px;background:var(--orange-dim);border:1px solid rgba(234,69,0,0.2);display:grid;place-items:center;flex-shrink:0;}
+.mn-icon svg{width:16px;height:16px;fill:none;stroke:var(--orange);stroke-width:2.5;stroke-linecap:round;}
+.mn-text{font-size:14px;color:var(--text2);line-height:1.7;}
+.mn-text strong{color:var(--text);}
+
+/* ── ROLE SECTION ── */
+.role-section{display:none;}
+.role-section.active{display:block;}
+
+/* ── REVEAL ── */
+.reveal{opacity:0;transform:translateY(28px);transition:opacity 0.7s cubic-bezier(0.23,1,0.32,1),transform 0.7s cubic-bezier(0.23,1,0.32,1);}
+.reveal.visible{opacity:1;transform:translateY(0);}
+.d1{transition-delay:0.1s;}
+.d2{transition-delay:0.2s;}
+.d3{transition-delay:0.3s;}
+
+/* ── FOOTER ── */
+footer{border-top:1px solid var(--border);padding:40px 24px;text-align:center;color:var(--text3);font-size:12px;font-family:var(--mono);}
+footer a{color:var(--orange);text-decoration:none;}
+
+/* ── LANG TOGGLE ── */
+.lang-toggle{background:transparent;color:var(--text2);font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:1px;padding:5px 11px;border-radius:8px;border:1px solid var(--border2);cursor:pointer;transition:color 0.2s,border-color 0.2s;}
+.lang-toggle:hover{color:var(--text);border-color:rgba(234,69,0,0.4);}
+
+/* ── RESPONSIVE ── */
+@media(max-width:800px){
+  nav{padding:0 20px;}
+  .step{grid-template-columns:1fr;gap:40px;}
+  .step.reverse{direction:ltr;}
+  .feature-grid{grid-template-columns:1fr;}
+  .phone-outer{display:none;}
+  .hero-btns{flex-direction:column;width:100%;max-width:300px;}
+}
+</style>
+</head>
+<body>
+
+<!-- BG -->
+<canvas id="bg-canvas"></canvas>
+<div class="bg-orbs">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+</div>
+<div class="bg-grid"></div>
+
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-mark">
+      <img src="icon.png" alt="MetroClock"/>
+    </div>
+    <span class="nav-logo-text">Metro<span>Clock</span></span>
+  </a>
+  <div style="display:flex;align-items:center;gap:12px;">
+    <div class="nav-version">v1.0</div>
+    <button class="lang-toggle" id="lang-toggle" onclick="toggleLang()">EN</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge"><span class="badge-dot"></span><span data-i18n="hero_badge">EchoSoft · Interna dokumentacija</span></div>
+  <h1>
+    <div class="line1">MetroClock</div>
+    <div class="line2" data-i18n="hero_title_line2">Vodič za korisnike</div>
+  </h1>
+  <p class="hero-sub" data-i18n="hero_sub">Sve što treba da znate — od prvog klokanja do upravljanja timom.</p>
+  <div class="hero-btns">
+    <button class="hero-btn primary" id="btn-emp" onclick="switchRole('employee')" data-i18n="btn_emp">Vodič za zaposlene</button>
+    <button class="hero-btn secondary" id="btn-mgr" onclick="switchRole('manager')" data-i18n="btn_mgr">Vodič za menadžere</button>
+  </div>
+  <div class="hero-scroll">
+    <div class="hero-scroll-line"></div>
+    <span data-i18n="scroll_text">skroluj dole</span>
+  </div>
+</section>
+
+<!-- ═══ EMPLOYEE ═══ -->
+<div id="role-employee" class="role-section active">
+
+<div class="section">
+  <div class="section-header reveal">
+    <div class="eyebrow" data-i18n="emp_eyebrow">Vodič za zaposlene</div>
+    <div class="section-title" data-i18n="emp_title">Sve na jednom mestu</div>
+    <div class="section-sub" data-i18n="emp_sub">MetroClock prati tvoje radne sate, obrađuje zahteve za odsustvo i automatski obaveštava tvog menadžera.</div>
+  </div>
+
+  <div class="feature-grid">
+    <div class="feature-card reveal d1">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg>
+      </div>
+      <div class="feature-title" data-i18n="emp_f1_title">Klokanje</div>
+      <div class="feature-desc" data-i18n="emp_f1_desc">Prati dolazak i odlazak jednim dodirom. Lokacija se automatski verifikuje putem WiFi-a i GPS-a.</div>
+    </div>
+    <div class="feature-card reveal d2">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="12" y2="17"/></svg>
+      </div>
+      <div class="feature-title" data-i18n="emp_f2_title">Zahtevi</div>
+      <div class="feature-desc" data-i18n="emp_f2_desc">Pošalji zahtev za rad od kuće, slobodan dan, bolovanje ili prekovremeni rad direktno iz aplikacije.</div>
+    </div>
+    <div class="feature-card reveal d3">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </div>
+      <div class="feature-title" data-i18n="emp_f3_title">Notifikacije</div>
+      <div class="feature-desc" data-i18n="emp_f3_desc">Dobij obaveštenje u trenutku kada menadžer odobri ili odbije tvoj zahtev.</div>
+    </div>
+  </div>
+
+  <div class="int-card reveal">
+    <div class="int-icon-wrap" style="background:rgba(88,101,242,0.12);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#7289DA" stroke-width="2" stroke-linecap="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    </div>
+    <div>
+      <div class="int-title" data-i18n="int_discord_title">Discord integracija</div>
+      <div class="int-desc" data-i18n-html="int_discord_desc">Svako klokanje i odobreni zahtev se automatski šalje u kanal <strong>#metroclock-integration</strong>. Tim je uvek informisan bez ikakvog dodatnog truda.</div>
+    </div>
+  </div>
+
+  <div class="int-card reveal">
+    <div class="int-icon-wrap" style="background:rgba(0,196,85,0.08);">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#2DD47E" stroke-width="2" stroke-linecap="round"><polyline points="9,11 12,14 22,4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+    </div>
+    <div>
+      <div class="int-title" data-i18n="int_clickup_title">ClickUp integracija</div>
+      <div class="int-desc" data-i18n="int_clickup_desc">Kada se uklokaš, MetroClock preuzima tvoje aktivne ClickUp taskove. Radni sati se evidentiraju uz svaki task — bez ručnih timesheetova.</div>
+    </div>
+  </div>
+</div>
+
+<!-- STEP 1 -->
+<div class="section" style="padding-top:0">
+  <div class="step reveal">
+    <div class="step-content">
+      <div class="step-num" data-i18n="e1_num">KORAK 01</div>
+      <div class="step-title" data-i18n="e1_title">Pristup aplikaciji</div>
+      <div class="step-body" data-i18n-html="e1_body">
+        <p>MetroClock nema javnu registraciju. <strong>Admin kreira tvoj nalog</strong> u podešavanjima radnog prostora. Dobijaš email i lozinku direktno od njega.</p>
+        <p>Preuzmi aplikaciju iz <strong>App Store-a</strong> (iPhone) ili <strong>Google Play-a</strong> (Android), pa se prijavi podacima koje si dobio/la.</p>
+        <div class="tip orange"><span class="tip-label">Napomena</span>Lozinka se postavlja od strane admina pri kreiranju naloga. Promeni je sa ekrana Profil nakon prve prijave.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="s-login">
+              <div class="s-login-logo">
+                <div class="s-logo-mark"><img src="icon.png" alt="MetroClock"/></div>
+                <h2>MetroClock</h2>
+                <p>by EchoSoft</p>
+              </div>
+              <div>
+                <div class="s-input-label">EMAIL</div>
+                <div class="s-input">marko@echosystem.rs</div>
+              </div>
+              <div>
+                <div class="s-input-label">LOZINKA</div>
+                <div class="s-input" style="letter-spacing:5px;color:var(--text2)">........</div>
+              </div>
+              <div class="s-btn">Prijava</div>
+              <div class="s-link">Zaboravili ste lozinku? <span>Resetujte ovde</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- STEP 2 -->
+  <div class="step reverse reveal">
+    <div class="step-content">
+      <div class="step-num" data-i18n="e2_num">KORAK 02</div>
+      <div class="step-title" data-i18n="e2_title">Dolazak na posao</div>
+      <div class="step-body" data-i18n-html="e2_body">
+        <p>Ekran sa satom je tvoj početni ekran. Da bi se uklokovao/la, <strong>pritisni veliko kružno dugme</strong> u centru. MetroClock verifikuje lokaciju na jedan od dva načina:</p>
+        <div class="steps-list">
+          <div class="steps-list-item">
+            <div class="step-bullet">1</div>
+            <div class="step-text"><strong>WiFi provera (primarna)</strong> — Telefon mora biti konektovan na <strong>EchoSystem 5G</strong>. Ako jeste, klokanje je trenutno.</div>
+          </div>
+          <div class="steps-list-item">
+            <div class="step-bullet">2</div>
+            <div class="step-text"><strong>GPS rezerva</strong> — Ako WiFi ne može da se verifikuje, aplikacija proverava GPS poziciju u odnosu na registrovani radijus kancelarije.</div>
+          </div>
+        </div>
+        <div class="tip green"><span class="tip-label">Zeleni indikator</span>Prikazuje se "EchoSystem 5G" oznaka kada si na ispravnoj mreži i klokanje je dostupno.</div>
+        <div class="tip orange" style="margin-top:10px"><span class="tip-label">Ne možeš da se uklokaš?</span>Proveri da li si na kancelarijskom WiFi-u ili u GPS opsegu. Ako problem ostaje, kontaktiraj menadžera.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status"><span>09:41</span><span style="font-size:9px">●●● WiFi</span></div>
+            <div class="s-clock">
+              <div class="s-clock-header">
+                <div class="s-user-info">
+                  <div class="s-avatar">MJ</div>
+                  <div><div class="s-username">Marko</div><div class="s-role-tag">zaposleni</div></div>
+                </div>
+                <div class="s-menu-icon"><span></span><span></span><span style="width:60%"></span></div>
+              </div>
+              <div class="s-clock-body">
+                <div class="s-wifi"><div class="s-wifi-dot"></div>EchoSystem 5G</div>
+                <div class="s-flip-clock">
+                  <div class="s-flip-digit">0</div><div class="s-flip-digit">9</div>
+                  <div class="s-colon">:</div>
+                  <div class="s-flip-digit">4</div><div class="s-flip-digit">1</div>
+                </div>
+                <div class="s-clock-btn">
+                  <div class="s-clock-btn-ring"></div>
+                  <div class="s-clock-btn-inner"><div class="s-clock-btn-label">CLOCK<br>IN</div></div>
+                </div>
+                <div class="s-elapsed" style="opacity:0">.</div>
+              </div>
+              <div class="s-status-bar">
+                <div class="s-status-item"><div class="s-status-label">DANAS</div><div class="s-status-val">0h 0m</div></div>
+                <div class="s-status-item"><div class="s-status-label">PLANIRANO</div><div class="s-status-val">8h</div></div>
+                <div class="s-status-item"><div class="s-status-label">NEDELJA</div><div class="s-status-val">32h</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- STEP 3 -->
+  <div class="step reveal">
+    <div class="step-content">
+      <div class="step-num" data-i18n="e3_num">KORAK 03</div>
+      <div class="step-title" data-i18n="e3_title">Odlazak i prekovremeni rad</div>
+      <div class="step-body" data-i18n-html="e3_body">
+        <p>Kada radni dan završi, <strong>ponovo pritisni dugme</strong> za odjavu. Prsten se menja u zelenu boju dok si uklokan/a, sa prikazanim proteklim vremenom.</p>
+        <p>Ako si radio/la više od planiranih dnevnih sati, MetroClock automatski detektuje prekovremeni i traži kratku napomenu.</p>
+        <div class="steps-list">
+          <div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Pritisni dugme — prompt za prekovremeni se prikazuje ako je primenljivo.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Dodaj napomenu (npr. <em>"Završio klijentsku prezentaciju"</em>).</div></div>
+          <div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Potvrdi — odjava je zabeležena, Discord obavešten.</div></div>
+        </div>
+        <div class="tip blue"><span class="tip-label">Zaboravio/la da se odjaviš?</span>Menadžer može ručno da doda ili izmeni klok evente iz ekrana Sati tima.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status"><span>18:22</span><span style="font-size:9px">●●● WiFi</span></div>
+            <div class="s-clock">
+              <div class="s-clock-header">
+                <div class="s-user-info">
+                  <div class="s-avatar">MJ</div>
+                  <div><div class="s-username">Marko</div><div class="s-role-tag">zaposleni</div></div>
+                </div>
+                <div class="s-menu-icon"><span></span><span></span><span></span></div>
+              </div>
+              <div class="s-clock-body">
+                <div class="s-wifi"><div class="s-wifi-dot"></div>EchoSystem 5G</div>
+                <div class="s-flip-clock">
+                  <div class="s-flip-digit">1</div><div class="s-flip-digit">8</div>
+                  <div class="s-colon">:</div>
+                  <div class="s-flip-digit">2</div><div class="s-flip-digit">2</div>
+                </div>
+                <div class="s-clock-btn out">
+                  <div class="s-clock-btn-ring"></div>
+                  <div class="s-clock-btn-inner"><div class="s-clock-btn-label" style="color:var(--green)">CLOCK<br>OUT</div></div>
+                </div>
+                <div class="s-elapsed">Proteklo: 09:22:14</div>
+              </div>
+              <div class="s-status-bar">
+                <div class="s-status-item"><div class="s-status-label">DANAS</div><div class="s-status-val" style="color:var(--green)">9h 22m</div></div>
+                <div class="s-status-item"><div class="s-status-label">PLANIRANO</div><div class="s-status-val">8h</div></div>
+                <div class="s-status-item"><div class="s-status-label">NEDELJA</div><div class="s-status-val">41h</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- STEP 4 -->
+  <div class="step reverse reveal">
+    <div class="step-content">
+      <div class="step-num" data-i18n="e4_num">KORAK 04</div>
+      <div class="step-title" data-i18n="e4_title">Zahtev za rad od kuće</div>
+      <div class="step-body" data-i18n-html="e4_body">
+        <p>Radiš od kuće? Pošalji zahtev unapred. Menadžer je odmah obavešten i može da odobri ili odbije uz napomenu.</p>
+        <div class="steps-list">
+          <div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Idi na tab <strong>Zahtevi</strong> i pritisni <strong>+</strong></div></div>
+          <div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Izaberi <strong>Rad od kuće</strong> kao tip zahteva</div></div>
+          <div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Izaberi datum ili opseg datuma</div></div>
+          <div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">Dodaj opcionu napomenu i pritisni <strong>Pošalji</strong></div></div>
+        </div>
+        <div class="tip green"><span class="tip-label">Na odobrenim remote danima</span>Možeš da se uklokaš bez prisustva u kancelariji — WiFi/GPS provera se preskače.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="s-sheet">
+              <div class="s-sheet-handle"></div>
+              <div class="s-sheet-title">Novi zahtev</div>
+              <div class="s-sheet-body">
+                <div>
+                  <div class="s-input-label">TIP ZAHTEVA</div>
+                  <div class="s-segment">
+                    <div class="s-seg-btn active">Rad od kuce</div>
+                    <div class="s-seg-btn">Slobodan dan</div>
+                    <div class="s-seg-btn">Ostalo</div>
+                  </div>
+                </div>
+                <div class="s-date-row">
+                  <div class="s-date-field"><div class="s-date-label">OD</div><div class="s-date-val">25. Mar</div></div>
+                  <div class="s-date-field"><div class="s-date-label">DO</div><div class="s-date-val">25. Mar</div></div>
+                </div>
+                <div>
+                  <div class="s-input-label">NAPOMENA</div>
+                  <div class="s-textarea">Jutarnji pozivi sa klijentom, bolje mi je od kuce.</div>
+                </div>
+                <div class="s-submit">Posalji zahtev</div>
+                <div style="font-size:10px;color:var(--text2);text-align:center;margin-top:-4px;">Menadzer ce biti odmah obavesten</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- STEP 5 -->
+  <div class="step reveal">
+    <div class="step-content">
+      <div class="step-num" data-i18n="e5_num">KORAK 05</div>
+      <div class="step-title" data-i18n="e5_title">Slobodan dan i bolovanje</div>
+      <div class="step-body" data-i18n-html="e5_body">
+        <p>Treba ti slobodan dan ili si se razboleo/la? Zahtev se šalje na isti način — izaberi tip i popuni datume.</p>
+        <div class="steps-list">
+          <div class="steps-list-item">
+            <div class="step-bullet">A</div>
+            <div class="step-text"><strong>Slobodan dan</strong> — Standardno plaćeno odsustvo. Bira se jedan dan ili opseg. Pošalji što pre unapred.</div>
+          </div>
+          <div class="steps-list-item">
+            <div class="step-bullet">B</div>
+            <div class="step-text"><strong>Bolovanje</strong> — Prijavi bolest za taj dan. Može se poslati isti dan ujutru.</div>
+          </div>
+          <div class="steps-list-item">
+            <div class="step-bullet">C</div>
+            <div class="step-text"><strong>Prekovremeni</strong> — Zahtev za unapred odobreni prekovremeni. Većina prekovremenih se detektuje automatski pri odjavi.</div>
+          </div>
+        </div>
+        <div class="tip orange"><span class="tip-label">Poseban slučaj</span>Ako se uklokaš na dan odobrenog slobodnog dana, MetroClock automatski rešava situaciju. Menadžer je obavešten.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status"><span>14:05</span><span style="font-size:9px">●●●</span></div>
+            <div class="s-requests" style="padding-bottom:55px;display:flex;flex-direction:column;height:100%;background:var(--bg);">
+              <div class="s-page-header"><div class="s-page-title">Moji zahtevi</div><div class="s-page-sub">4 zahteva ovog meseca</div></div>
+              <div class="s-req-list">
+                <div class="s-req-item"><div><div class="s-req-type">Rad od kuce</div><div class="s-req-date">25. Mar 2026.</div></div><div class="s-badge pending">Na cekanju</div></div>
+                <div class="s-req-item"><div><div class="s-req-type">Slobodan dan</div><div class="s-req-date">20–21. Mar 2026.</div></div><div class="s-badge approved">Odobreno</div></div>
+                <div class="s-req-item"><div><div class="s-req-type">Bolovanje</div><div class="s-req-date">10. Mar 2026.</div></div><div class="s-badge approved">Odobreno</div></div>
+                <div class="s-req-item"><div><div class="s-req-type">Prekovremeni</div><div class="s-req-date">28. Feb 2026.</div></div><div class="s-badge rejected">Odbijeno</div></div>
+              </div>
+              <div class="s-fab">+</div>
+            </div>
+            <div class="s-bottom-nav">
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></div>Clock</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>My Hours</div>
+              <div class="s-nav-item active"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/></svg></div>Requests</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>Profile</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- STEP 6 -->
+  <div class="step reverse reveal" style="margin-bottom:0">
+    <div class="step-content">
+      <div class="step-num" data-i18n="e6_num">KORAK 06</div>
+      <div class="step-title" data-i18n="e6_title">Profil i zaboravljena lozinka</div>
+      <div class="step-body" data-i18n-html="e6_body">
+        <p>Pritisni tab <strong>Profil</strong> (dole desno) da pogledaš podatke naloga — ime, ulogu, email i nedeljni raspored.</p>
+        <p>Ako si zaboravio/la lozinku:</p>
+        <div class="steps-list">
+          <div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Na ekranu prijave pritisni <strong>"Zaboravili ste lozinku?"</strong></div></div>
+          <div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Unesi svoju radnu <strong>email adresu</strong></div></div>
+          <div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Proveri inbox — stigao je <strong>link za resetovanje</strong></div></div>
+          <div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">Klikni link, postavi novu lozinku, vrati se u aplikaciju i prijavi se</div></div>
+        </div>
+        <div class="tip blue"><span class="tip-label">Email ne stiže?</span>Proveri spam folder. Poruka dolazi od noreply@metroclockbyecho.firebaseapp.com</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status"><span>10:30</span><span style="font-size:9px">●●●</span></div>
+            <div class="s-profile">
+              <div class="s-profile-hero">
+                <div class="s-profile-avatar">MJ</div>
+                <div class="s-profile-name">Marko Jovanovic</div>
+                <div class="s-profile-email">marko@echosystem.rs</div>
+                <div class="s-profile-badge">zaposleni</div>
+              </div>
+              <div class="s-profile-rows">
+                <div class="s-profile-row"><span class="s-profile-row-label">Odgovara</span><span class="s-profile-row-val">Jelena Savic</span></div>
+                <div class="s-profile-row"><span class="s-profile-row-label">Pon–Pet</span><span class="s-profile-row-val">8h / dan</span></div>
+                <div class="s-profile-row"><span class="s-profile-row-label">Vikend</span><span class="s-profile-row-val">0h / dan</span></div>
+                <div class="s-profile-row" style="border-color:var(--red);background:rgba(245,82,82,0.05);margin-top:4px;"><span class="s-profile-row-label" style="color:var(--red)">Odjavi se</span><span style="font-size:13px;color:var(--red)">→</span></div>
+              </div>
+            </div>
+            <div class="s-bottom-nav">
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></div>Clock</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>My Hours</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="13" y2="13"/></svg></div>Requests</div>
+              <div class="s-nav-item active"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>Profile</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div><!-- end employee -->
+
+
+<!-- ═══ MANAGER ═══ -->
+<div id="role-manager" class="role-section">
+<div class="section">
+  <div class="section-header reveal">
+    <div class="eyebrow" data-i18n="mgr_eyebrow">Vodič za menadžere</div>
+    <div class="section-title" data-i18n="mgr_title">Tvoj tim, tvoja odgovornost</div>
+    <div class="section-sub" data-i18n="mgr_sub">Kao menadžer, imaš sve funkcije zaposlenih plus alate za praćenje sati tima i odobravanje zahteva.</div>
+  </div>
+
+  <div class="manager-note reveal">
+    <div class="mn-icon">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    </div>
+    <div class="mn-text" data-i18n-html="mgr_note">
+      <strong>Ti si i zaposleni i menadžer.</strong> Sve iz vodiča za zaposlene važi i za tebe — klokaš se na isti način, šalješ zahteve na isti način, i odgovaraš svom sopstvenom menadžeru ili adminu. Ovaj vodič pokriva isključivo dodatne alate koje imaš kao menadžer.
+    </div>
+  </div>
+
+  <div class="feature-grid">
+    <div class="feature-card reveal d1">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><polyline points="22,12 18,12 15,21 9,3 6,12 2,12"/></svg>
+      </div>
+      <div class="feature-title" data-i18n="mgr_f1_title">Inbox</div>
+      <div class="feature-desc" data-i18n="mgr_f1_desc">Pregledaj i obrađuj sve zahteve svojih direktnih podređenih na jednom mestu.</div>
+    </div>
+    <div class="feature-card reveal d2">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      </div>
+      <div class="feature-title" data-i18n="mgr_f2_title">Sati tima</div>
+      <div class="feature-desc" data-i18n="mgr_f2_desc">Pregledaj poslednjih 30 dana klok evenata za svakog člana tima.</div>
+    </div>
+    <div class="feature-card reveal d3">
+      <div class="feature-icon">
+        <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      </div>
+      <div class="feature-title" data-i18n="mgr_f3_title">Izmena evenata</div>
+      <div class="feature-desc" data-i18n="mgr_f3_desc">Dodaj propuštene klok evente, izmeni pogrešne ili unesi ručno sate rada od kuće.</div>
+    </div>
+  </div>
+</div>
+
+<!-- M-STEP 1 -->
+<div class="section" style="padding-top:0">
+  <div class="step reveal">
+    <div class="step-content">
+      <div class="step-num" data-i18n="m1_num">MENADŽER · 01</div>
+      <div class="step-title" data-i18n="m1_title">Pregled zahteva u Inboxu</div>
+      <div class="step-body" data-i18n-html="m1_body">
+        <p>Kada zaposleni pošalje zahtev, odmah dobijaš <strong>push notifikaciju</strong>. Svi zahtevi na čekanju se prikazuju u <strong>Inbox</strong> tabu.</p>
+        <div class="steps-list">
+          <div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Pritisni zahtev da ga proširiš — vidi datume, tip i napomenu zaposlenog.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Pritisni <strong style="color:var(--green)">Odobri</strong> ili <strong style="color:var(--red)">Odbij</strong></div></div>
+          <div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Opciono dodaj napomenu — posebno korisno pri odbijanju.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">Zaposleni je automatski obavešten putem notifikacije.</div></div>
+        </div>
+        <div class="tip orange"><span class="tip-label">Discord</span>Odobreni i odbijeni zahtevi se automatski šalju u <strong>#metroclock-integration</strong>.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status"><span>09:15</span><span style="font-size:9px">●●●</span></div>
+            <div style="height:100%;background:var(--bg);display:flex;flex-direction:column;padding-bottom:55px;">
+              <div class="s-page-header"><div class="s-page-title">Inbox</div><div class="s-page-sub">2 zahteva na cekanju</div></div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:10px;flex:1;overflow:hidden;">
+                <div class="s-inbox-item">
+                  <div class="s-inbox-user">
+                    <div class="s-avatar" style="width:24px;height:24px;font-size:9px;">MJ</div>
+                    <div><div class="s-inbox-name">Marko Jovanovic</div><div class="s-inbox-type">Rad od kuce</div></div>
+                  </div>
+                  <div class="s-inbox-dates">25. Mar 2026. · 1 dan</div>
+                  <div class="s-inbox-note">"Jutarnji pozivi sa klijentom."</div>
+                  <div class="s-inbox-actions">
+                    <div class="s-inbox-btn approve">Odobri</div>
+                    <div class="s-inbox-btn reject">Odbij</div>
+                  </div>
+                </div>
+                <div class="s-inbox-item">
+                  <div class="s-inbox-user">
+                    <div class="s-avatar" style="width:24px;height:24px;font-size:9px;background:#5B8EF5">SM</div>
+                    <div><div class="s-inbox-name">Stefan Miletic</div><div class="s-inbox-type">Slobodan dan</div></div>
+                  </div>
+                  <div class="s-inbox-dates">28–29. Mar 2026. · 2 dana</div>
+                  <div class="s-inbox-actions">
+                    <div class="s-inbox-btn approve">Odobri</div>
+                    <div class="s-inbox-btn reject">Odbij</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="s-bottom-nav">
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></div>Clock</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>My Hours</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>Team</div>
+              <div class="s-nav-item active"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><polyline points="22,12 16,12 14,15 10,15 8,12 2,12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 17.16 4H6.84a2 2 0 0 0-1.79 1.11z"/></svg></div>Inbox</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>Profile</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- M-STEP 2 -->
+  <div class="step reverse reveal">
+    <div class="step-content">
+      <div class="step-num" data-i18n="m2_num">MENADŽER · 02</div>
+      <div class="step-title" data-i18n="m2_title">Praćenje sati tima</div>
+      <div class="step-body" data-i18n-html="m2_body">
+        <p>Ekran <strong>Sati tima</strong> prikazuje poslednjih 30 dana klok evenata za svakog direktnog podređenog. Ukupno odrađene sate, dnevni detalji i anomalije — sve na jednom mestu.</p>
+        <div class="steps-list">
+          <div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Pritisni člana tima da proširiš dnevni log.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Svaki red prikazuje: datum, vreme dolaska, vreme odlaska i ukupno sate.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Propušteni eventi se prikazuju kao praznine koje možeš popuniti.</div></div>
+        </div>
+        <div class="tip blue"><span class="tip-label">Vidiš samo svoje direktne podređene</span>Sistem koristi polje "Menadžer" sa korisničkog profila za filtriranje.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status"><span>11:00</span><span style="font-size:9px">●●●</span></div>
+            <div style="height:100%;background:var(--bg);display:flex;flex-direction:column;padding-bottom:55px;">
+              <div class="s-page-header"><div class="s-page-title">Sati tima</div><div class="s-page-sub">Poslednjih 30 dana · 3 clana</div></div>
+              <div style="padding:12px;display:flex;flex-direction:column;gap:8px;">
+                <div class="s-team-row"><div><div class="s-team-name">Marko Jovanovic</div><div class="s-team-sub">zaposleni · 21 dan</div></div><div class="s-team-hours" style="color:var(--green)">162h</div></div>
+                <div class="s-team-row"><div><div class="s-team-name">Stefan Miletic</div><div class="s-team-sub">zaposleni · 19 dana</div></div><div class="s-team-hours" style="color:var(--green)">148h</div></div>
+                <div class="s-team-row"><div><div class="s-team-name">Ana Petrovic</div><div class="s-team-sub">zaposleni · 20 dana</div></div><div class="s-team-hours" style="color:var(--orange)">156h</div></div>
+                <div style="font-size:10px;color:var(--text2);text-align:center;padding-top:4px;font-family:var(--mono);">Pritisni za detalje i izmene</div>
+              </div>
+            </div>
+            <div class="s-bottom-nav">
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></div>Clock</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>My Hours</div>
+              <div class="s-nav-item active"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>Team</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><polyline points="22,12 16,12 14,15 10,15 8,12 2,12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 17.16 4H6.84a2 2 0 0 0-1.79 1.11z"/></svg></div>Inbox</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>Profile</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- M-STEP 3 -->
+  <div class="step reveal">
+    <div class="step-content">
+      <div class="step-num" data-i18n="m3_num">MENADŽER · 03</div>
+      <div class="step-title" data-i18n="m3_title">Izmena i dodavanje klok evenata</div>
+      <div class="step-body" data-i18n-html="m3_body">
+        <p>Zaposleni ponekad zaborave da se uklokaš. Kao menadžer, imaš punu kontrolu nad njihovim klok eventima.</p>
+        <div class="steps-list">
+          <div class="steps-list-item"><div class="step-bullet">E</div><div class="step-text"><strong>Izmeni event</strong> — pritisni bilo koji red da izmeniš vreme ili ga označiš kao remote dan.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">+</div><div class="step-text"><strong>Dodaj propušteni event</strong> — pritisni "+ Dodaj event" na dnu dana za ručni unos para dolazak/odlazak.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">H</div><div class="step-text"><strong>Unesi remote sate</strong> — za odobrene remote dane, ručno unesi odrađene sate od kuće.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">X</div><div class="step-text"><strong>Obriši event</strong> — brisanje je trajno i trenutno. Nema povratka, obavezno potvrdi.</div></div>
+        </div>
+        <div class="tip orange"><span class="tip-label">Pažnja</span>Brisanja su permanentna i odmah na snazi. Dvaput proveri pre potvrde.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="s-sheet">
+              <div class="s-sheet-handle"></div>
+              <div class="s-sheet-title" style="padding:12px 18px 8px;">Marko · 23. Mar</div>
+              <div class="s-sheet-body" style="gap:8px;">
+                <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px;">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;">
+                    <div style="font-size:11px;font-weight:600;">Klok event</div>
+                    <div style="font-size:10px;color:var(--text2);font-family:var(--mono);">8h 42m</div>
+                  </div>
+                  <div class="s-date-row">
+                    <div class="s-date-field"><div class="s-date-label">DOLAZAK</div><div class="s-date-val">09:03</div></div>
+                    <div class="s-date-field"><div class="s-date-label">ODLAZAK</div><div class="s-date-val">17:45</div></div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <div class="s-inbox-btn approve" style="flex:2;padding:11px;font-size:11px;border-radius:9px;">Sacuvaj izmene</div>
+                  <div class="s-inbox-btn reject" style="flex:1;padding:11px;font-size:11px;border-radius:9px;">Obrisi</div>
+                </div>
+                <div style="text-align:center;font-size:10px;color:var(--text2);font-family:var(--mono);">+ Dodaj jos jedan event za ovaj dan</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<!-- M-STEP 4 -->
+  <div class="step reverse reveal" style="margin-bottom:0">
+    <div class="step-content">
+      <div class="step-num" data-i18n="m4_num">MENADŽER · 04</div>
+      <div class="step-title" data-i18n="m4_title">I ti odgovaraš gore</div>
+      <div class="step-body" data-i18n-html="m4_body">
+        <p>Kao menadžer, i dalje odgovaraš nekom iznad sebe — drugom menadžeru ili adminu. To znači:</p>
+        <div class="steps-list">
+          <div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Tvoji klok eventi su vidljivi <strong>tvom menadžeru</strong>, ne samo tebi.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Tvoji zahtevi idu u inbox <strong>tvog menadžera</strong> na odobrenje.</div></div>
+          <div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Prekovremeni rad se detektuje i prijavljuje <strong>tvom menadžeru</strong> na isti način kao kod tvojih zaposlenih.</div></div>
+        </div>
+        <div class="tip green"><span class="tip-label">Ista aplikacija, dvostruka uloga</span>MetroClock prikazuje tačno ono što ti treba na osnovu tvoje uloge, sve iz jednog naloga bez dodatnog logina.</div>
+      </div>
+    </div>
+    <div class="phone-outer reveal d2">
+      <div class="phone-wrapper">
+        <div class="phone">
+          <div class="phone-notch"></div>
+          <div class="phone-screen">
+            <div class="phone-status"><span>10:30</span><span style="font-size:9px">●●●</span></div>
+            <div class="s-profile">
+              <div class="s-profile-hero">
+                <div class="s-profile-avatar" style="background:var(--orange);">JS</div>
+                <div class="s-profile-name">Jelena Savic</div>
+                <div class="s-profile-email">jelena@echosystem.rs</div>
+                <div class="s-profile-badge">menadzer</div>
+              </div>
+              <div class="s-profile-rows">
+                <div class="s-profile-row"><span class="s-profile-row-label">Odgovara</span><span class="s-profile-row-val">Nikola Djordjevic</span></div>
+                <div class="s-profile-row"><span class="s-profile-row-label">Direktni podredjeni</span><span class="s-profile-row-val" style="color:var(--green);">3 osobe</span></div>
+                <div class="s-profile-row"><span class="s-profile-row-label">Pon–Pet</span><span class="s-profile-row-val">8h / dan</span></div>
+                <div class="s-profile-row" style="border-color:var(--red);background:rgba(245,82,82,0.05);margin-top:4px;"><span class="s-profile-row-label" style="color:var(--red)">Odjavi se</span><span style="font-size:13px;color:var(--red)">→</span></div>
+              </div>
+            </div>
+            <div class="s-bottom-nav">
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><polyline points="12,7 12,12 15,15"/></svg></div>Clock</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div>My Hours</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>Team</div>
+              <div class="s-nav-item"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><polyline points="22,12 16,12 14,15 10,15 8,12 2,12"/><path d="M5.45 5.11L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 17.16 4H6.84a2 2 0 0 0-1.79 1.11z"/></svg></div>Inbox</div>
+              <div class="s-nav-item active"><div class="s-nav-ico"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>Profile</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div><!-- end manager -->
+
+<footer>
+  <strong style="color:var(--text2)">MetroClock</strong> · EchoSoft · 2026 ·
+  <a href="https://metroclockbyecho.web.app">metroclockbyecho.web.app</a>
+</footer>
+
+<script>
+// ── i18n ──
+const TG = {
+  sr: {
+    hero_badge:'EchoSoft · Interna dokumentacija',
+    hero_title_line2:'Vodič za korisnike',
+    hero_sub:'Sve što treba da znate — od prvog klokanja do upravljanja timom.',
+    btn_emp:'Vodič za zaposlene', btn_mgr:'Vodič za menadžere', scroll_text:'skroluj dole',
+    emp_eyebrow:'Vodič za zaposlene', emp_title:'Sve na jednom mestu',
+    emp_sub:'MetroClock prati tvoje radne sate, obrađuje zahteve za odsustvo i automatski obaveštava tvog menadžera.',
+    emp_f1_title:'Klokanje', emp_f1_desc:'Prati dolazak i odlazak jednim dodirom. Lokacija se automatski verifikuje putem WiFi-a i GPS-a.',
+    emp_f2_title:'Zahtevi', emp_f2_desc:'Pošalji zahtev za rad od kuće, slobodan dan, bolovanje ili prekovremeni rad direktno iz aplikacije.',
+    emp_f3_title:'Notifikacije', emp_f3_desc:'Dobij obaveštenje u trenutku kada menadžer odobri ili odbije tvoj zahtev.',
+    int_discord_title:'Discord integracija',
+    int_discord_desc:'Svako klokanje i odobreni zahtev se automatski šalje u kanal <strong>#metroclock-integration</strong>. Tim je uvek informisan bez ikakvog dodatnog truda.',
+    int_clickup_title:'ClickUp integracija',
+    int_clickup_desc:'Kada se uklokaš, MetroClock preuzima tvoje aktivne ClickUp taskove. Radni sati se evidentiraju uz svaki task — bez ručnih timesheetova.',
+    e1_num:'KORAK 01', e1_title:'Pristup aplikaciji',
+    e1_body:'<p>MetroClock nema javnu registraciju. <strong>Admin kreira tvoj nalog</strong> u podešavanjima radnog prostora. Dobijaš email i lozinku direktno od njega.</p><p>Preuzmi aplikaciju iz <strong>App Store-a</strong> (iPhone) ili <strong>Google Play-a</strong> (Android), pa se prijavi podacima koje si dobio/la.</p><div class="tip orange"><span class="tip-label">Napomena</span>Lozinka se postavlja od strane admina pri kreiranju naloga. Promeni je sa ekrana Profil nakon prve prijave.</div>',
+    e2_num:'KORAK 02', e2_title:'Dolazak na posao',
+    e2_body:'<p>Ekran sa satom je tvoj početni ekran. Da bi se uklokovao/la, <strong>pritisni veliko kružno dugme</strong> u centru. MetroClock verifikuje lokaciju na jedan od dva načina:</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text"><strong>WiFi provera (primarna)</strong> — Telefon mora biti konektovan na <strong>EchoSystem 5G</strong>. Ako jeste, klokanje je trenutno.</div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text"><strong>GPS rezerva</strong> — Ako WiFi ne može da se verifikuje, aplikacija proverava GPS poziciju u odnosu na registrovani radijus kancelarije.</div></div></div><div class="tip green"><span class="tip-label">Zeleni indikator</span>Prikazuje se "EchoSystem 5G" oznaka kada si na ispravnoj mreži i klokanje je dostupno.</div><div class="tip orange" style="margin-top:10px"><span class="tip-label">Ne možeš da se uklokaš?</span>Proveri da li si na kancelarijskom WiFi-u ili u GPS opsegu. Ako problem ostaje, kontaktiraj menadžera.</div>',
+    e3_num:'KORAK 03', e3_title:'Odlazak i prekovremeni rad',
+    e3_body:'<p>Kada radni dan završi, <strong>ponovo pritisni dugme</strong> za odjavu. Prsten se menja u zelenu boju dok si uklokan/a, sa prikazanim proteklim vremenom.</p><p>Ako si radio/la više od planiranih dnevnih sati, MetroClock automatski detektuje prekovremeni i traži kratku napomenu.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Pritisni dugme — prompt za prekovremeni se prikazuje ako je primenljivo.</div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Dodaj napomenu (npr. <em>"Završio klijentsku prezentaciju"</em>).</div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Potvrdi — odjava je zabeležena, Discord obavešten.</div></div></div><div class="tip blue"><span class="tip-label">Zaboravio/la da se odjaviš?</span>Menadžer može ručno da doda ili izmeni klok evente iz ekrana Sati tima.</div>',
+    e4_num:'KORAK 04', e4_title:'Zahtev za rad od kuće',
+    e4_body:'<p>Radiš od kuće? Pošalji zahtev unapred. Menadžer je odmah obavešten i može da odobri ili odbije uz napomenu.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Idi na tab <strong>Zahtevi</strong> i pritisni <strong>+</strong></div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Izaberi <strong>Rad od kuće</strong> kao tip zahteva</div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Izaberi datum ili opseg datuma</div></div><div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">Dodaj opcionu napomenu i pritisni <strong>Pošalji</strong></div></div></div><div class="tip green"><span class="tip-label">Na odobrenim remote danima</span>Možeš da se uklokaš bez prisustva u kancelariji — WiFi/GPS provera se preskače.</div>',
+    e5_num:'KORAK 05', e5_title:'Slobodan dan i bolovanje',
+    e5_body:'<p>Treba ti slobodan dan ili si se razboleo/la? Zahtev se šalje na isti način — izaberi tip i popuni datume.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">A</div><div class="step-text"><strong>Slobodan dan</strong> — Standardno plaćeno odsustvo. Bira se jedan dan ili opseg. Pošalji što pre unapred.</div></div><div class="steps-list-item"><div class="step-bullet">B</div><div class="step-text"><strong>Bolovanje</strong> — Prijavi bolest za taj dan. Može se poslati isti dan ujutru.</div></div><div class="steps-list-item"><div class="step-bullet">C</div><div class="step-text"><strong>Prekovremeni</strong> — Zahtev za unapred odobreni prekovremeni. Većina prekovremenih se detektuje automatski pri odjavi.</div></div></div><div class="tip orange"><span class="tip-label">Poseban slučaj</span>Ako se uklokaš na dan odobrenog slobodnog dana, MetroClock automatski rešava situaciju. Menadžer je obavešten.</div>',
+    e6_num:'KORAK 06', e6_title:'Profil i zaboravljena lozinka',
+    e6_body:'<p>Pritisni tab <strong>Profil</strong> (dole desno) da pogledaš podatke naloga — ime, ulogu, email i nedeljni raspored.</p><p>Ako si zaboravio/la lozinku:</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Na ekranu prijave pritisni <strong>"Zaboravili ste lozinku?"</strong></div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Unesi svoju radnu <strong>email adresu</strong></div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Proveri inbox — stigao je <strong>link za resetovanje</strong></div></div><div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">Klikni link, postavi novu lozinku, vrati se u aplikaciju i prijavi se</div></div></div><div class="tip blue"><span class="tip-label">Email ne stiže?</span>Proveri spam folder. Poruka dolazi od noreply@metroclockbyecho.firebaseapp.com</div>',
+    mgr_eyebrow:'Vodič za menadžere', mgr_title:'Tvoj tim, tvoja odgovornost',
+    mgr_sub:'Kao menadžer, imaš sve funkcije zaposlenih plus alate za praćenje sati tima i odobravanje zahteva.',
+    mgr_note:'<strong>Ti si i zaposleni i menadžer.</strong> Sve iz vodiča za zaposlene važi i za tebe — klokaš se na isti način, šalješ zahteve na isti način, i odgovaraš svom sopstvenom menadžeru ili adminu. Ovaj vodič pokriva isključivo dodatne alate koje imaš kao menadžer.',
+    mgr_f1_title:'Inbox', mgr_f1_desc:'Pregledaj i obrađuj sve zahteve svojih direktnih podređenih na jednom mestu.',
+    mgr_f2_title:'Sati tima', mgr_f2_desc:'Pregledaj poslednjih 30 dana klok evenata za svakog člana tima.',
+    mgr_f3_title:'Izmena evenata', mgr_f3_desc:'Dodaj propuštene klok evente, izmeni pogrešne ili unesi ručno sate rada od kuće.',
+    m1_num:'MENADŽER · 01', m1_title:'Pregled zahteva u Inboxu',
+    m1_body:'<p>Kada zaposleni pošalje zahtev, odmah dobijaš <strong>push notifikaciju</strong>. Svi zahtevi na čekanju se prikazuju u <strong>Inbox</strong> tabu.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Pritisni zahtev da ga proširiš — vidi datume, tip i napomenu zaposlenog.</div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Pritisni <strong style="color:var(--green)">Odobri</strong> ili <strong style="color:var(--red)">Odbij</strong></div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Opciono dodaj napomenu — posebno korisno pri odbijanju.</div></div><div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">Zaposleni je automatski obavešten putem notifikacije.</div></div></div><div class="tip orange"><span class="tip-label">Discord</span>Odobreni i odbijeni zahtevi se automatski šalju u <strong>#metroclock-integration</strong>.</div>',
+    m2_num:'MENADŽER · 02', m2_title:'Praćenje sati tima',
+    m2_body:'<p>Ekran <strong>Sati tima</strong> prikazuje poslednjih 30 dana klok evenata za svakog direktnog podređenog. Ukupno odrađene sate, dnevni detalji i anomalije — sve na jednom mestu.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Pritisni člana tima da proširiš dnevni log.</div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Svaki red prikazuje: datum, vreme dolaska, vreme odlaska i ukupno sate.</div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Propušteni eventi se prikazuju kao praznine koje možeš popuniti.</div></div></div><div class="tip blue"><span class="tip-label">Vidiš samo svoje direktne podređene</span>Sistem koristi polje "Menadžer" sa korisničkog profila za filtriranje.</div>',
+    m3_num:'MENADŽER · 03', m3_title:'Izmena i dodavanje klok evenata',
+    m3_body:'<p>Zaposleni ponekad zaborave da se uklokaš. Kao menadžer, imaš punu kontrolu nad njihovim klok eventima.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">E</div><div class="step-text"><strong>Izmeni event</strong> — pritisni bilo koji red da izmeniš vreme ili ga označiš kao remote dan.</div></div><div class="steps-list-item"><div class="step-bullet">+</div><div class="step-text"><strong>Dodaj propušteni event</strong> — pritisni "+ Dodaj event" na dnu dana za ručni unos para dolazak/odlazak.</div></div><div class="steps-list-item"><div class="step-bullet">H</div><div class="step-text"><strong>Unesi remote sate</strong> — za odobrene remote dane, ručno unesi odrađene sate od kuće.</div></div><div class="steps-list-item"><div class="step-bullet">X</div><div class="step-text"><strong>Obriši event</strong> — brisanje je trajno i trenutno. Nema povratka, obavezno potvrdi.</div></div></div><div class="tip orange"><span class="tip-label">Pažnja</span>Brisanja su permanentna i odmah na snazi. Dvaput proveri pre potvrde.</div>',
+    m4_num:'MENADŽER · 04', m4_title:'I ti odgovaraš gore',
+    m4_body:'<p>Kao menadžer, i dalje odgovaraš nekom iznad sebe — drugom menadžeru ili adminu. To znači:</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Tvoji klok eventi su vidljivi <strong>tvom menadžeru</strong>, ne samo tebi.</div></div><div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Tvoji zahtevi idu u inbox <strong>tvog menadžera</strong> na odobrenje.</div></div><div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Prekovremeni rad se detektuje i prijavljuje <strong>tvom menadžeru</strong> na isti način kao kod tvojih zaposlenih.</div></div></div><div class="tip green"><span class="tip-label">Ista aplikacija, dvostruka uloga</span>MetroClock prikazuje tačno ono što ti treba na osnovu tvoje uloge, sve iz jednog naloga bez dodatnog logina.</div>',
+  },
+  en: {
+    hero_badge:'EchoSoft · Internal Documentation',
+    hero_title_line2:'User Guide',
+    hero_sub:'Everything you need to know — from your first clock-in to managing a team.',
+    btn_emp:'Employee Guide', btn_mgr:'Manager Guide', scroll_text:'scroll down',
+    emp_eyebrow:'Employee Guide', emp_title:'Everything in one place',
+    emp_sub:'MetroClock tracks your working hours, processes leave requests, and automatically notifies your manager.',
+    emp_f1_title:'Clock In/Out', emp_f1_desc:'Track arrivals and departures with one tap. Location is automatically verified via WiFi and GPS.',
+    emp_f2_title:'Requests', emp_f2_desc:'Submit a request for remote work, day off, sick leave, or overtime directly from the app.',
+    emp_f3_title:'Notifications', emp_f3_desc:'Get notified the moment your manager approves or rejects your request.',
+    int_discord_title:'Discord Integration',
+    int_discord_desc:'Every clock-in and approved request is automatically sent to the <strong>#metroclock-integration</strong> channel. The team is always informed without any extra effort.',
+    int_clickup_title:'ClickUp Integration',
+    int_clickup_desc:'When you clock in, MetroClock fetches your active ClickUp tasks. Working hours are logged against each task — no manual timesheets.',
+    e1_num:'STEP 01', e1_title:'App Access',
+    e1_body:'<p>MetroClock has no public registration. <strong>The admin creates your account</strong> in workspace settings. You receive an email and password directly from them.</p><p>Download the app from the <strong>App Store</strong> (iPhone) or <strong>Google Play</strong> (Android), then sign in with your credentials.</p><div class="tip orange"><span class="tip-label">Note</span>Your password is set by the admin when your account is created. Change it from the Profile screen after your first login.</div>',
+    e2_num:'STEP 02', e2_title:'Clocking In',
+    e2_body:'<p>The clock screen is your home screen. To clock in, <strong>press the large circular button</strong> in the center. MetroClock verifies your location in one of two ways:</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text"><strong>WiFi check (primary)</strong> — Your phone must be connected to <strong>EchoSystem 5G</strong>. If it is, clock-in is instant.</div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text"><strong>GPS fallback</strong> — If WiFi cannot be verified, the app checks your GPS position against the registered office radius.</div></div></div><div class="tip green"><span class="tip-label">Green indicator</span>The "EchoSystem 5G" label appears when you\'re on the correct network and clock-in is available.</div><div class="tip orange" style="margin-top:10px"><span class="tip-label">Can\'t clock in?</span>Check that you\'re on the office WiFi or within GPS range. If the problem persists, contact your manager.</div>',
+    e3_num:'STEP 03', e3_title:'Clocking Out & Overtime',
+    e3_body:'<p>When your work day ends, <strong>press the button again</strong> to clock out. The ring turns green while you\'re clocked in, with elapsed time shown.</p><p>If you worked more than your planned daily hours, MetroClock automatically detects overtime and asks for a short note.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Press the button — the overtime prompt appears if applicable.</div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Add a note (e.g. <em>"Finished client presentation"</em>).</div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Confirm — clock-out is recorded, Discord notified.</div></div></div><div class="tip blue"><span class="tip-label">Forgot to clock out?</span>Your manager can manually add or edit clock events from the Team Hours screen.</div>',
+    e4_num:'STEP 04', e4_title:'Remote Work Request',
+    e4_body:'<p>Working from home? Submit a request in advance. Your manager is notified immediately and can approve or reject with a note.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Go to the <strong>Requests</strong> tab and tap <strong>+</strong></div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Select <strong>Remote Work</strong> as the request type</div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Pick a date or date range</div></div><div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">Add an optional note and tap <strong>Submit</strong></div></div></div><div class="tip green"><span class="tip-label">On approved remote days</span>You can clock in without being at the office — the WiFi/GPS check is skipped.</div>',
+    e5_num:'STEP 05', e5_title:'Day Off & Sick Leave',
+    e5_body:'<p>Need a day off or feeling sick? Requests are submitted the same way — choose the type and fill in the dates.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">A</div><div class="step-text"><strong>Day Off</strong> — Standard paid leave. Select one day or a range. Submit as early as possible.</div></div><div class="steps-list-item"><div class="step-bullet">B</div><div class="step-text"><strong>Sick Leave</strong> — Report illness for that day. Can be submitted the same morning.</div></div><div class="steps-list-item"><div class="step-bullet">C</div><div class="step-text"><strong>Overtime</strong> — Request for pre-approved overtime. Most overtime is detected automatically on clock-out.</div></div></div><div class="tip orange"><span class="tip-label">Special case</span>If you clock in on an approved day-off, MetroClock automatically resolves the conflict. Your manager is notified.</div>',
+    e6_num:'STEP 06', e6_title:'Profile & Forgotten Password',
+    e6_body:'<p>Tap the <strong>Profile</strong> tab (bottom right) to view your account details — name, role, email, and weekly schedule.</p><p>If you forgot your password:</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">On the login screen tap <strong>"Forgot your password?"</strong></div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Enter your work <strong>email address</strong></div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Check your inbox — a <strong>reset link</strong> has been sent</div></div><div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">Click the link, set a new password, return to the app and log in</div></div></div><div class="tip blue"><span class="tip-label">Email not arriving?</span>Check your spam folder. The message comes from noreply@metroclockbyecho.firebaseapp.com</div>',
+    mgr_eyebrow:'Manager Guide', mgr_title:'Your team, your responsibility',
+    mgr_sub:'As a manager, you have all employee features plus tools for tracking team hours and approving requests.',
+    mgr_note:'<strong>You are both an employee and a manager.</strong> Everything in the employee guide applies to you — you clock in the same way, submit requests the same way, and report to your own manager or admin. This guide covers exclusively the additional tools you have as a manager.',
+    mgr_f1_title:'Inbox', mgr_f1_desc:'Review and process all requests from your direct reports in one place.',
+    mgr_f2_title:'Team Hours', mgr_f2_desc:'View the last 30 days of clock events for each team member.',
+    mgr_f3_title:'Edit Events', mgr_f3_desc:'Add missed clock events, correct wrong ones, or manually log remote work hours.',
+    m1_num:'MANAGER · 01', m1_title:'Reviewing Requests in Inbox',
+    m1_body:'<p>When an employee submits a request, you instantly receive a <strong>push notification</strong>. All pending requests are shown in the <strong>Inbox</strong> tab.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Tap a request to expand it — see dates, type, and the employee\'s note.</div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Tap <strong style="color:var(--green)">Approve</strong> or <strong style="color:var(--red)">Reject</strong></div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Optionally add a note — especially useful when rejecting.</div></div><div class="steps-list-item"><div class="step-bullet">4</div><div class="step-text">The employee is automatically notified via push notification.</div></div></div><div class="tip orange"><span class="tip-label">Discord</span>Approved and rejected requests are automatically posted to <strong>#metroclock-integration</strong>.</div>',
+    m2_num:'MANAGER · 02', m2_title:'Team Hours Tracking',
+    m2_body:'<p>The <strong>Team Hours</strong> screen shows the last 30 days of clock events for each direct report. Total hours worked, daily details, and anomalies — all in one place.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">1</div><div class="step-text">Tap a team member to expand their daily log.</div></div><div class="steps-list-item"><div class="step-bullet">2</div><div class="step-text">Each row shows: date, clock-in time, clock-out time, and total hours.</div></div><div class="steps-list-item"><div class="step-bullet">3</div><div class="step-text">Missing events appear as gaps you can fill in.</div></div></div><div class="tip blue"><span class="tip-label">You only see your direct reports</span>The system uses the "Manager" field on each user\'s profile for filtering.</div>',
+    m3_num:'MANAGER · 03', m3_title:'Editing & Adding Clock Events',
+    m3_body:'<p>Employees sometimes forget to clock in or out. As a manager, you have full control over their clock events.</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">E</div><div class="step-text"><strong>Edit event</strong> — tap any row to change the time or mark it as a remote day.</div></div><div class="steps-list-item"><div class="step-bullet">+</div><div class="step-text"><strong>Add missed event</strong> — tap "+ Add event" at the bottom of a day to manually enter a clock-in/out pair.</div></div><div class="steps-list-item"><div class="step-bullet">H</div><div class="step-text"><strong>Log remote hours</strong> — for approved remote days, manually enter the hours worked from home.</div></div><div class="steps-list-item"><div class="step-bullet">X</div><div class="step-text"><strong>Delete event</strong> — deletion is permanent and immediate. No undo, always confirm first.</div></div></div><div class="tip orange"><span class="tip-label">Warning</span>Deletions are permanent and take effect immediately. Double-check before confirming.</div>',
+    m4_num:'MANAGER · 04', m4_title:'You Report Up Too',
+    m4_body:'<p>As a manager, you still report to someone above you — another manager or the admin. That means:</p><div class="steps-list"><div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Your clock events are visible to <strong>your manager</strong>, not just you.</div></div><div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Your requests go to <strong>your manager\'s</strong> inbox for approval.</div></div><div class="steps-list-item"><div class="step-bullet">→</div><div class="step-text">Overtime is detected and reported to <strong>your manager</strong> the same way as for your employees.</div></div></div><div class="tip green"><span class="tip-label">Same app, dual role</span>MetroClock shows exactly what you need based on your role — all from one account with no extra login.</div>',
+  }
+};
+
+let currentLangG = 'sr';
+
+function applyLangG(l) {
+  currentLangG = l;
+  const t = TG[l];
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const k = el.dataset.i18n;
+    if (t[k] !== undefined) el.textContent = t[k];
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const k = el.dataset.i18nHtml;
+    if (t[k] !== undefined) el.innerHTML = t[k];
+  });
+  const btn = document.getElementById('lang-toggle');
+  if (btn) btn.textContent = l === 'sr' ? 'EN' : 'SR';
+  document.documentElement.lang = l;
+}
+
+function toggleLang() { applyLangG(currentLangG === 'sr' ? 'en' : 'sr'); }
+
+applyLangG('sr');
+
+// ── ROLE SWITCH ──
+function switchRole(role) {
+  ['employee','manager'].forEach(r => {
+    document.getElementById('role-'+r).classList.toggle('active', r === role);
+  });
+  document.getElementById('btn-emp').classList.toggle('primary', role === 'employee');
+  document.getElementById('btn-emp').classList.toggle('secondary', role !== 'employee');
+  document.getElementById('btn-mgr').classList.toggle('primary', role === 'manager');
+  document.getElementById('btn-mgr').classList.toggle('secondary', role !== 'manager');
+  window.scrollTo({top: document.querySelector('.hero').offsetHeight - 62, behavior:'smooth'});
+  setTimeout(() => {
+    document.querySelectorAll('#role-'+role+' .reveal').forEach(el => {
+      if (el.getBoundingClientRect().top < window.innerHeight + 100) el.classList.add('visible');
+    });
+  }, 400);
+}
+
+// ── REVEAL ──
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, {threshold:0.08, rootMargin:'0px 0px -30px 0px'});
+document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+// ── 3D PHONE TILT ──
+document.querySelectorAll('.phone-outer').forEach(outer => {
+  const wrapper = outer.querySelector('.phone-wrapper');
+  const isReverse = wrapper.closest('.step.reverse') !== null;
+  const base = isReverse ? {y:18,x:7,z:1} : {y:-18,x:7,z:-1};
+
+  outer.addEventListener('mousemove', e => {
+    const r = outer.getBoundingClientRect();
+    const nx = (e.clientX - r.left) / r.width - 0.5;
+    const ny = (e.clientY - r.top) / r.height - 0.5;
+    const ry = base.y + nx * 14;
+    const rx = base.x - ny * 10;
+    wrapper.style.transform = `rotateY(${ry}deg) rotateX(${rx}deg) rotateZ(${base.z}deg)`;
+    wrapper.style.animationPlayState = 'paused';
+  });
+  outer.addEventListener('mouseleave', () => {
+    wrapper.style.transform = '';
+    wrapper.style.animationPlayState = 'running';
+  });
+});
+
+// ── CANVAS PARTICLES ──
+(function() {
+  const canvas = document.getElementById('bg-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, particles = [];
+
+  function resize() {
+    W = canvas.width = window.innerWidth;
+    H = canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  class Particle {
+    constructor() { this.reset(); }
+    reset() {
+      this.x = Math.random() * W;
+      this.y = Math.random() * H;
+      this.r = Math.random() * 1.2 + 0.3;
+      this.vx = (Math.random() - 0.5) * 0.18;
+      this.vy = (Math.random() - 0.5) * 0.18;
+      this.alpha = Math.random() * 0.25 + 0.05;
+      this.color = Math.random() > 0.85 ? `rgba(234,69,0,${this.alpha})` : `rgba(255,255,255,${this.alpha * 0.4})`;
+      this.life = 0;
+      this.maxLife = Math.random() * 400 + 200;
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      this.life++;
+      const t = this.life / this.maxLife;
+      const fade = t < 0.1 ? t / 0.1 : t > 0.85 ? (1-t)/0.15 : 1;
+      this.currentAlpha = this.alpha * fade;
+      if (this.life >= this.maxLife || this.x < -10 || this.x > W+10 || this.y < -10 || this.y > H+10) this.reset();
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.r, 0, Math.PI * 2);
+      ctx.fillStyle = this.color.replace(/[\d.]+\)$/, this.currentAlpha + ')');
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < 90; i++) {
+    const p = new Particle();
+    p.life = Math.floor(Math.random() * p.maxLife);
+    particles.push(p);
+  }
+
+  // Connection lines
+  function drawConnections() {
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i+1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < 120) {
+          const a = (1 - dist/120) * 0.04;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(234,69,0,${a})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function tick() {
+    ctx.clearRect(0, 0, W, H);
+    drawConnections();
+    particles.forEach(p => { p.update(); p.draw(); });
+    requestAnimationFrame(tick);
+  }
+  tick();
+})();
+</script>
+</body>
+</html>

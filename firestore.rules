@@ -1,0 +1,92 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──────────────────────────────────────────────────────────────
+
+    function me() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isManagerOrAdmin() {
+      return me().role in ['manager', 'admin', 'superadmin'];
+    }
+
+    function isAdmin() {
+      return me().role in ['admin', 'superadmin'];
+    }
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // ── Users ─────────────────────────────────────────────────────────────────
+
+    match /users/{userId} {
+      // Every authenticated user can read their own profile
+      allow read: if signedIn() && request.auth.uid == userId;
+
+      // Managers and admins can read all users (needed for TeamHours, BadgeService)
+      allow read: if signedIn() && isManagerOrAdmin();
+
+      // Users can update their own FCM token only
+      allow update: if signedIn() && request.auth.uid == userId &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['fcmToken']);
+
+      // Admin can create / fully update user records
+      allow create, update, delete: if signedIn() && isAdmin();
+    }
+
+    // ── Clock Events ──────────────────────────────────────────────────────────
+
+    match /clockEvents/{eventId} {
+      // Employees: read and create their own events
+      allow read:   if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Managers and admins: full access (needed for CRUD in TeamHoursView + BadgeService queries)
+      allow read, write: if signedIn() && isManagerOrAdmin();
+    }
+
+    // ── Requests ──────────────────────────────────────────────────────────────
+
+    match /requests/{requestId} {
+      // Employee reads their own requests
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+
+      // Manager reads requests assigned to them
+      allow read: if signedIn() && resource.data.managerId == request.auth.uid;
+
+      // Employee creates their own requests
+      allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
+
+      // Employee can delete their own pending request (withdraw)
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid
+        && resource.data.status == 'pending';
+
+      // Employee can update their own pending request (edit before approval)
+      allow update: if signedIn() && resource.data.userId == request.auth.uid
+        && resource.data.status == 'pending';
+
+      // Manager can approve / reject / update requests they manage
+      allow update: if signedIn() && resource.data.managerId == request.auth.uid;
+
+      // Admin full access
+      allow read, write: if signedIn() && isAdmin();
+    }
+
+    // ── Offices ───────────────────────────────────────────────────────────────
+
+    match /offices/{officeId} {
+      allow read:  if signedIn();
+      allow write: if signedIn() && isAdmin();
+    }
+
+    // ── Workspaces ────────────────────────────────────────────────────────────
+
+    match /workspaces/{workspaceId} {
+      allow read:  if signedIn() && me().workspaceId == workspaceId;
+      allow write: if signedIn() && isAdmin();
+    }
+  }
+}
